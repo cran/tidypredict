@@ -76,6 +76,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <p>To keep the example reproducible, a SQLite database will be used to simulate a larger scale deployment.</p>
 <p>First the data is prepared in memory. The article will use the <code>nycflights13::flights</code> data, with a couple of modifications</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(dplyr)
+<span class="kw">library</span>(tibble)
 
 flights_table &lt;-<span class="st"> </span>nycflights13<span class="op">::</span>flights <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">current_score =</span> <span class="dv">0</span>) <span class="op">%&gt;%</span>

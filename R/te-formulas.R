@@ -1,3 +1,5 @@
+strip_factor <- function(x) gsub("factor\\((.+)\\)", "\\1", x)
+
 te_fit_lm <- function(parsedmodel) {
   labels <- parsedmodel %>%
     filter(labels == "labels") %>%
@@ -16,7 +18,7 @@ te_fit_lm <- function(parsedmodel) {
 
   f <- seq_len(nrow(all_terms)) %>%
     map(~{
-      vars <- colnames(all_terms)
+      vars <- strip_factor(colnames(all_terms))
       vals <- as.character(all_terms[.x, ])
 
       estimate <- vals[vars == "estimate"]
@@ -57,13 +59,11 @@ te_fit_glm <- function(parsedmodel) {
     assigned <- 1
     fit <- expr(1 - 1 / (1 + exp(!! fit)))
   }
-  
-  
+
   if (link == "log") {
     assigned <- 1
     fit <- expr(exp(!! fit))
   }
-
 
   if (assigned == 0) {
     stop("Combination of family and link are not supported")

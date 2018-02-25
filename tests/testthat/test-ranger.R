@@ -1,6 +1,6 @@
-context("randomForest")
+context("ranger")
 set.seed(100)
-rf_model <- randomForest::randomForest(Species ~ ., data = iris, ntree = 100, proximity = TRUE)
+rf_model <- ranger::ranger(Species ~ ., data = iris, num.trees = 100)
 
 test_that("Returns the correct type", {
   expect_is(parse_model(rf_model), "data.frame")

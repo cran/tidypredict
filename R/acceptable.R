@@ -43,13 +43,12 @@ fun_calls <- function(f) {
   }
 }
 
-
 acceptable_lm <- function(model) {
   # Check for invalid contrasts
   if (length(model$contrasts)) {
     contr <- model$contrasts
-    contr <- contr[!("contr.treatment" %in% model$contrasts)]
-    if (length(contr > 0)) {
+    contr <- contr[!("contr.treatment" %in% contr)]
+    if (length(contr) > 0) {
       stop(
         "The treatment contrast is the only one supported at this time. Field(s) with an invalid contrast are: ",
         paste0("`", names(contr), "`", collapse = ","),
@@ -60,7 +59,7 @@ acceptable_lm <- function(model) {
 
   # Check for in-line formulas
   funs <- fun_calls(model$call)
-  funs <- funs[!(funs %in% c("~", "+", "-", "*", "(", ")", "::", "lm", "glm"))]
+  funs <- funs[!(funs %in% c("~", "+", "-", "*", "(", ")", "::", "lm", "glm", "factor"))]
   if (length(funs) > 0) {
     contains_offset <- any(funs == "offset")
     contains_other <- funs[funs != "offset"]
@@ -68,7 +67,13 @@ acceptable_lm <- function(model) {
       paste0(
         "Functions inside the formula are not supported.",
         if (contains_offset) "\n- Offset detected.  Try using offset as an argument instead.",
-        if (length(contains_other) > 0) paste0("\n- Functions detected: ", paste0("`", contains_other, "`", collapse = ","), ". Use `dplyr` transformations to prepare the data.")
+        if (length(contains_other) > 0) {
+          paste0(
+            "\n- Functions detected: ",
+            paste0("`", contains_other, "`", collapse = ","),
+            ". Use `dplyr` transformations to prepare the data."
+          )
+        }
       ),
       call. = FALSE
     )

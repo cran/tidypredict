@@ -6,57 +6,30 @@
 #' The result still has to be added to the fit to obtain the upper bound, and
 #' subtracted from fit to obtain the lower bound.
 #'
-#' @param model An R model or a tibble with a parsed model. It currently supports
-#' lm() models only.
+#' @param model An R model or a list with a parsed model
 #' @param interval The prediction interval, defaults to 0.95
 #'
-#' @examples
-#'
-#' library(dplyr)
-#' df <- mutate(mtcars, cyl = paste0("cyl", cyl))
-#' model <- lm(mpg ~ wt + cyl * disp, offset = am, data = df)
+#' @examples 
+#' 
+#' model <- lm(mpg ~ wt + cyl * disp, offset = am, data = mtcars)
 #' tidypredict_interval(model)
-#'
+#' 
 #' @export
 tidypredict_interval <- function(model, interval = 0.95) {
   UseMethod("tidypredict_interval")
 }
 
 #' @export
-tidypredict_interval.lm <- function(model, interval = 0.95) {
-  parsedmodel <- parse_model(model)
-  te_interval_lm(parsedmodel, interval)
-}
-
-#' @export
-tidypredict_interval.glm <- function(model, interval = 0.95) {
-  parsedmodel <- parse_model(model)
-  te_interval_glm(parsedmodel, interval)
-}
-
-#' @export
 `tidypredict_interval.data.frame` <- function(model, interval = 0.95) {
-  model <- model %>%
-    mutate_if(is.factor, as.character) %>%
-    as.tibble()
+  stop("data.frame based parsed models are no longer supported")
+}
 
-  model_type <- model %>%
-    filter(.data$labels == "model") %>%
-    pull(.data$vals)
-
-  assigned <- 0
-
-  if (model_type == "lm") {
-    assigned <- 1
-    te_interval_lm(model)
-  }
-
-  if (model_type == "glm") {
-    assigned <- 1
-    te_interval_glm(model)
-  }
-
-  if (assigned == 0) {
-    stop("Model not recognized")
-  }
+#' @export
+tidypredict_interval.list <- function(model, interval = 0.95) {
+  mt <- model$general$model
+  fit <- NULL
+  if(mt == "lm") fit <- te_interval_lm(model)
+  if(mt == "glm") fit <- te_interval_glm(model)
+  if(is.null(fit)) stop("Model type not supported")
+  fit
 }

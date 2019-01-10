@@ -1,13 +1,24 @@
-tidypredict
-================
+
+# tidypredict <img src="man/figures/logo.png" align="right" width = "140px"/>
+
+[![Build
+Status](https://travis-ci.org/edgararuiz/tidypredict.svg?branch=master)](https://travis-ci.org/edgararuiz/tidypredict)
+[![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/tidypredict)](http://cran.r-project.org/package=tidypredict)
+[![Coverage
+Status](https://img.shields.io/codecov/c/github/edgararuiz/tidypredict/master.svg)](https://codecov.io/github/edgararuiz/tidypredict?branch=master)
+
+[![Downloads](https://cranlogs.r-pkg.org/badges/tidypredict)]()
 
 Run predictions inside the database. `tidypredict` parses a fitted R
 model object, and returns a formula in ‘Tidy Eval’ code that calculates
 the predictions.
 
+<img src="man/figures/howitworks.PNG" align="right" width = "600px"/>
+
 **It works with several databases back-ends** because it leverages
 `dplyr` and `dbplyr` for the final SQL translation of the algorithm. It
-currently supports `lm()`, `glm()` and `randomForest()` models.
+currently supports `lm()`, `glm()`, `randomForest()`, `ranger()` ane
+`earth()` models.
 
 ## Installation
 
@@ -38,17 +49,14 @@ prediction:
 tidypredict_sql(model, dbplyr::simulate_mssql())
 ```
 
-    ## <SQL> ((39.6862614802529) + ((`wt`) * (-3.19097213898374))) + ((`cyl`) * (-1.5077949682598))
+    ## <SQL> 39.6862614802529 + (`wt` * -3.19097213898374) + (`cyl` * -1.5077949682598)
 
 ## Supported models
 
-The following R models are currently supported. For more info please
-review the corresponding vignette:
+The following models are supported:
 
-  - [Linear Regression](http://tidypredict.netlify.com/articles/lm/) -
-    `lm()`
-  - [Generalized Linear
-    model](http://tidypredict.netlify.com/articles/glm/) - `glm()`
-  - [Random
-    Forest](http://tidypredict.netlify.com/articles/randomforest/) -
-    `randomForest()`
+  - Linear Regression - `lm()`
+  - Generalized Linear model - `glm()`
+  - Random Forest models - `randomForest::randomForest()`
+  - Random Forest models, via `ranger` - `ranger::ranger()`
+  - MARS models - `earth::earth()`

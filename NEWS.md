@@ -1,3 +1,21 @@
+# tidypredict 0.4.0
+
+## New features
+
+- Parses `ranger` classification models.
+
+- Adds method support for `broom`'s `tidy()` function.  Regression models only
+
+- Adds `as_parsed_model()` function. It adds the proper class components to the list.
+
+- Adds initial support for `partykit`'s `ctree()` model
+
+- Adds support for `parsnip` fitted models: `lm`, `randomForest`, `ranger`, and `earth`
+
+- Adds support for xgb.Booster models provided by the `xgboost` package (@Athospd, #43)
+
+- Adds support for `Cubist::cubist()` models (# 36)
+
 # tidypredict 0.3.0
 
 ## New features
@@ -16,6 +34,8 @@
 
 - Removes dependencies on: tidyr, tibble
 
+- The `x/y` interface for `earth` models can now be used. 
+
 ## Bug Fixes
 
 - It now returns all of the trees instead of just one for tree based models (`randomForest` & `ranger`) (#29)
@@ -24,7 +44,7 @@
 
 ## Bug Fixes
 
-- tibble 2.0.0 compatability fix (@krlmlr)
+- tibble 2.0.0 compatibility fix (@krlmlr)
 
 # tidypredict 0.2.0
 

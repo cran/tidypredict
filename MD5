@@ -1,6 +1,6 @@
-92550ca6d1ce81858820787ef22b873f *DESCRIPTION
+64663930ba3030909e7ee82c252ace74 *DESCRIPTION
 cd4de928026daf65afbf93d083033e18 *NAMESPACE
-a64fdb56e9406e65e9a2f69c867bdcc0 *NEWS.md
+d99a8a37723476d544cda73bd02cc4b1 *NEWS.md
 f0145a5926708532725e3fa080f07ca0 *R/acceptable.R
 3f45fd3f08ae65bdac19d62901d03d6d *R/as-parsed-model.R
 92da212385656f76e84d29b13b8cb1ae *R/model-cubist.R
@@ -53,8 +53,8 @@ aa222c1f781ae594f1b79e4f16767068 *inst/doc/sql.html
 dd4ca83fd1ee008b84d2c59b479c9faf *inst/doc/tree.R
 357fc65a5fb48c0d9adbe71215d1c0e9 *inst/doc/tree.Rmd
 3d261eb070a59bee2b066b8c83821f1f *inst/doc/tree.html
-09e85a4fedb4fcbeec254a73b31d6010 *inst/doc/xgboost.R
-43fb34173134bb5545c74571c75df710 *inst/doc/xgboost.Rmd
+2c7ae093643a976fff8e766b3d2f7c57 *inst/doc/xgboost.R
+832500690af7ad2b79f63db1a4cb1e15 *inst/doc/xgboost.Rmd
 820497b33c20a925fe1685cdf9a5b639 *inst/doc/xgboost.html
 08563c12fb89b66af9c5657ee08720e7 *man/acceptable_formula.Rd
 047294667c18d4f55da3ed5d030d78d9 *man/as_parsed_model.Rd
@@ -72,7 +72,7 @@ d4bb4b13858d664df4d2116b9cdf916f *man/tidypredict_sql.Rd
 fbfc1c151f999c06f1fb3e0a4cd90ad5 *man/tidypredict_sql_interval.Rd
 7af590cc7882f2adf57951be4f05e277 *man/tidypredict_test.Rd
 ef2c3445aca75561b9d9c2c158e1c3d8 *man/tidypredict_to_column.Rd
-34f66eceb1fb51377717e31a1ee7099a *tests/testthat.R
+7590da6747ae5e53e2f1a0bf7ce0783f *tests/testthat.R
 9111375302fb3ecce7ae24096b5b237c *tests/testthat/test-acceptable.R
 d48cb33cf42b997bfcdb62e9c01094d6 *tests/testthat/test-cubist.R
 5b4573212a3226918f936a60e5480f68 *tests/testthat/test-earth.R
@@ -84,7 +84,7 @@ dc05bbed3691159ff2b0d66bd4ebd14d *tests/testthat/test-sql.R
 263bc473a895ae912d8e8c19153fa278 *tests/testthat/test-tester.R
 d974b35b2ef1e47c3081e1858b2b55d0 *tests/testthat/test_glm.R
 6eca699b30e78106e7e36686afd61a84 *tests/testthat/test_lm.R
-0a70aeb9eeac10175902d9f98ba02854 *tests/testthat/test_xgboost.R
+3a3e46e35b88ed6042893bfa2086d654 *tests/testthat/test_xgboost.R
 cf3258fce1f03014a5d78ee855650ac2 *vignettes/cubist.Rmd
 0dda99c49415e9071e6e9328e41ab6dc *vignettes/glm.Rmd
 c498755f0732f8a5d193b2a33a7daf8a *vignettes/lm.Rmd
@@ -98,4 +98,4 @@ f55c917d15979defe14741e37744e1f2 *vignettes/ranger.Rmd
 860ad6c3c367f5401538ee9e012907b9 *vignettes/sql.Rmd
 357fc65a5fb48c0d9adbe71215d1c0e9 *vignettes/tree.Rmd
 4d29efb80f02c73d4014d27522f4e2d0 *vignettes/tree.csv
-43fb34173134bb5545c74571c75df710 *vignettes/xgboost.Rmd
+832500690af7ad2b79f63db1a4cb1e15 *vignettes/xgboost.Rmd

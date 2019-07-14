@@ -1,11 +1,19 @@
 ## ----setup, include = FALSE----------------------------------------------
+
+if (requireNamespace("xgboost", quietly = TRUE)) {
+  library(tidypredict)
+  library(xgboost)
+  library(dplyr)
+  eval_code <- TRUE
+} else {
+  eval_code <- FALSE
+}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = eval_code
 )
-library(tidypredict)
-library(xgboost)
-library(dplyr)
+
 
 ## ------------------------------------------------------------------------
 library(xgboost)

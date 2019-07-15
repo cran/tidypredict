@@ -1,6 +1,6 @@
-64663930ba3030909e7ee82c252ace74 *DESCRIPTION
-cd4de928026daf65afbf93d083033e18 *NAMESPACE
-d99a8a37723476d544cda73bd02cc4b1 *NEWS.md
+6ec0f546af99095cdcc109de7988658d *DESCRIPTION
+e4dcba5dcff6079c1abfb025b026bdfe *NAMESPACE
+fc2675351f695687f10d9288fb36c533 *NEWS.md
 f0145a5926708532725e3fa080f07ca0 *R/acceptable.R
 3f45fd3f08ae65bdac19d62901d03d6d *R/as-parsed-model.R
 92da212385656f76e84d29b13b8cb1ae *R/model-cubist.R
@@ -9,10 +9,10 @@ d5e0e3156440c32797e6ba4b96f40e49 *R/model-lm.R
 ef5b6d1db75112bead771ebdb310ff8c *R/model-partykit.R
 b5b130f41ffe314b3bc98729a2194707 *R/model-ranger.R
 1c017f840f26de98952f1e21c7d4f788 *R/model-rf.R
-2392ff59eadda0d61250871825e7964f *R/model-xgboost.R
+3d1ee675a787f0fd6487daf0eef8bf6b *R/model-xgboost.R
 ce49ec3a929a206e19ff17f6a526c627 *R/parsemodel.R
 a423c64be05cf809908ebba5b220a784 *R/predict-column.R
-2e0739470a564e6e63aaa5d4f70f4e24 *R/predict-fit.R
+5a32b4c40b1a373771a3045243b1410e *R/predict-fit.R
 df1d54e9c5c36d94bb2d309f61144e3d *R/predict-interval.R
 6f732f92cc94d4f99b64f2b8e223ab32 *R/test-predictions.R
 96242fbc7f46d4ff3467b2076b1833ed *R/tidymodels.R
@@ -55,7 +55,7 @@ dd4ca83fd1ee008b84d2c59b479c9faf *inst/doc/tree.R
 3d261eb070a59bee2b066b8c83821f1f *inst/doc/tree.html
 2c7ae093643a976fff8e766b3d2f7c57 *inst/doc/xgboost.R
 832500690af7ad2b79f63db1a4cb1e15 *inst/doc/xgboost.Rmd
-820497b33c20a925fe1685cdf9a5b639 *inst/doc/xgboost.html
+09ff50c86d7292adaea26ea8262b27cc *inst/doc/xgboost.html
 08563c12fb89b66af9c5657ee08720e7 *man/acceptable_formula.Rd
 047294667c18d4f55da3ed5d030d78d9 *man/as_parsed_model.Rd
 bd4f1b99fafe5268e45b6843fc7b6ab9 *man/figures/howitworks.png
@@ -72,13 +72,13 @@ d4bb4b13858d664df4d2116b9cdf916f *man/tidypredict_sql.Rd
 fbfc1c151f999c06f1fb3e0a4cd90ad5 *man/tidypredict_sql_interval.Rd
 7af590cc7882f2adf57951be4f05e277 *man/tidypredict_test.Rd
 ef2c3445aca75561b9d9c2c158e1c3d8 *man/tidypredict_to_column.Rd
-7590da6747ae5e53e2f1a0bf7ce0783f *tests/testthat.R
+ca956b559859d6ef57f115f3d481a294 *tests/testthat.R
 9111375302fb3ecce7ae24096b5b237c *tests/testthat/test-acceptable.R
 d48cb33cf42b997bfcdb62e9c01094d6 *tests/testthat/test-cubist.R
 5b4573212a3226918f936a60e5480f68 *tests/testthat/test-earth.R
 81b06bbddf66e29c6ddf9ac73d9f5605 *tests/testthat/test-list.R
 9436f65ff3716fe0c97daf75942ebcef *tests/testthat/test-party.R
-c208db2312e5b61defecddd691aa766a *tests/testthat/test-ranger.R
+8a646a1380ee7c023160e611c6a1083d *tests/testthat/test-ranger.R
 67590019b3096b46247fd0c484369a2c *tests/testthat/test-rf.R
 dc05bbed3691159ff2b0d66bd4ebd14d *tests/testthat/test-sql.R
 263bc473a895ae912d8e8c19153fa278 *tests/testthat/test-tester.R

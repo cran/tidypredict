@@ -27,7 +27,7 @@ tidypredict_fit(model)[1]
 ## ------------------------------------------------------------------------
 library(parsnip)
 
-parsnip_model <- rand_forest() %>%
+parsnip_model <- rand_forest(mode = "classification") %>%
   set_engine("randomForest") %>%
   fit(Species ~ ., data = iris)
 

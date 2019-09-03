@@ -48,7 +48,7 @@ tidypredict_test(model, mtcars, xg_df = xgb_bin_data)
 ## ------------------------------------------------------------------------
 library(parsnip)
 
-p_model <- boost_tree() %>%
+p_model <- boost_tree(mode = "regression") %>%
   set_engine("xgboost") %>%
   fit(am ~ ., data = mtcars)
 

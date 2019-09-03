@@ -1,3 +1,9 @@
+# tidypredict 0.4.3
+
+- Adds support for categorical predictors in `partykit`
+
+- Fixes `parsnip` tests to meet standards of new CRAN version
+
 # tidypredict 0.4.2
 
 - Simplifies tests that verify `ranger` 

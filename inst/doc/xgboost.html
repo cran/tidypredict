@@ -7,6 +7,7 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -94,7 +95,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
       var style = rule.style.cssText;
       // check if color or background-color is set
-      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
       // replace div.sourceCode by a pre.sourceCode rule
       sheets[i].deleteRule(j);
       sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
@@ -467,7 +468,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <p><code>parsnip</code> fitted models are also supported by <code>tidypredict</code>:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw">library</span>(parsnip)</a>
 <a class="sourceLine" id="cb5-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb5-3" data-line-number="3">p_model &lt;-<span class="st"> </span><span class="kw">boost_tree</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-3" data-line-number="3">p_model &lt;-<span class="st"> </span><span class="kw">boost_tree</span>(<span class="dt">mode =</span> <span class="st">&quot;regression&quot;</span>) <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb5-4" data-line-number="4"><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;xgboost&quot;</span>) <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb5-5" data-line-number="5"><span class="st">  </span><span class="kw">fit</span>(am <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> mtcars)</a></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">tidypredict_test</span>(p_model, mtcars, <span class="dt">xg_df =</span> xgb_bin_data)</a>
@@ -586,6 +587,9 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <a class="sourceLine" id="cb8-42" data-line-number="42"><span class="co">#&gt;   .. .. .. ..$ missing: logi TRUE</span></a></code></pre></div>
 </div>
 
+
+
+<!-- code folding -->
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->

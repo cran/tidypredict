@@ -42,7 +42,7 @@ str(parse_model(model), 2)
 ## ------------------------------------------------------------------------
 library(parsnip)
 
-p_model <- mars(prod_degree = 3) %>%
+p_model <- mars(mode = "regression", prod_degree = 3) %>%
   set_engine("earth") %>%
   fit(age ~ sibsp + parch, data = etitanic)
 

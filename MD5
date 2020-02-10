@@ -1,6 +1,6 @@
-58eeeddf76e7bc42377175719ae77caf *DESCRIPTION
+5225b8af2aa02ebc8eab132f14270fb8 *DESCRIPTION
 54abd35d086ff4da67801215a7155eea *NAMESPACE
-654f077938ff5b78bccd1c540519d358 *NEWS.md
+9334d441ebf1513fd6c1519d7e3819cf *NEWS.md
 f0145a5926708532725e3fa080f07ca0 *R/acceptable.R
 3f45fd3f08ae65bdac19d62901d03d6d *R/as-parsed-model.R
 92da212385656f76e84d29b13b8cb1ae *R/model-cubist.R
@@ -65,7 +65,7 @@ e95a34d4531cfe17b798328c307d8c73 *man/parse_model.Rd
 ad8f68b8a952dcbfd2477f9b240e7605 *man/print.tidypredict_test.Rd
 f0097910765d6950b46d7f7a40cfcb37 *man/reexports.Rd
 a0b0ef1a3b224854cb75694d2e79d4ce *man/tidy.pm_regression.Rd
-cef3799ac49fdbdcdc2d55c34f932879 *man/tidypredict-package.Rd
+2050c0dd0c24afc9c701a5a5b04088f9 *man/tidypredict-package.Rd
 45d9482f175fc7d72d58e191871f6cfd *man/tidypredict_fit.Rd
 9b676db23acd302a63de4d4a52bf37be *man/tidypredict_interval.Rd
 d4bb4b13858d664df4d2116b9cdf916f *man/tidypredict_sql.Rd

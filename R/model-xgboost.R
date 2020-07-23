@@ -133,17 +133,17 @@ build_fit_formula_xgb <- function(parsedmodel) {
     assigned <- 1
     f <- expr(!!f + !!base_score)
     warning("If the objective is a custom function, please explicitly apply it to the output.")
-  } else if (objective %in% c("reg:linear")) {
+  } else if (objective %in% c("reg:squarederror")) {
     assigned <- 1
     f <- expr(!!f + !!base_score)
   } else if (objective %in% c("binary:logitraw")) {
     assigned <- 1
   } else if (objective %in% c("binary:logistic", "reg:logistic")) {
     assigned <- 1
-    f <- expr(1 - 1 / (1 + exp(!!f)))
+    f <- expr(1 - 1 / (1 + exp(!!f + binomial()$linkfun(!!base_score))))
   }
   if (assigned == 0) {
-    stop("Only objectives 'binary:logistic', 'reg:linear', 'reg:logistic', 'binary:logitraw' are supported yet.")
+    stop("Only objectives 'binary:logistic', 'reg:squarederror', 'reg:logistic', 'binary:logitraw' are supported yet.")
   }
   f
 }

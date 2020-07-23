@@ -8,36 +8,66 @@
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 
 
 <title>Save and re-load models</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
 
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
 @media screen {
 div.sourceCode { overflow: auto; }
 }
 @media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -46,9 +76,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -115,9 +145,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -286,7 +313,8 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
 
 
@@ -305,91 +333,91 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <p><code>tidypredict</code> splits the translation process in two. It first parses the model to extract the needed components to produce the prediction. And second, it uses the object with the parsed information to produce the R formula. Thanks to this two step process, <code>tidypredict</code> does not need to parse the model every time. <code>tidypredict</code>’s functions also accept R objects that contained already models that have been parsed already. Additionally, because the parsed model object is made up of a list made up of basic variables, it is possible to save it in a file. Currently, the best file format is YAML.</p>
 <p>For this article, we will use the following model:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">model &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>(wt <span class="op">+</span><span class="st"> </span>disp) <span class="op">*</span><span class="st"> </span>cyl, <span class="dt">data =</span> mtcars)</a></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a>model &lt;-<span class="st"> </span><span class="kw">lm</span>(mpg <span class="op">~</span><span class="st"> </span>(wt <span class="op">+</span><span class="st"> </span>disp) <span class="op">*</span><span class="st"> </span>cyl, <span class="dt">data =</span> mtcars)</span></code></pre></div>
 <div id="parse-model" class="section level2">
 <h2>Parse model</h2>
 <p>The <code>parse_model()</code> function allows to run the first step manually. It will return an R list object which contains all of the needed information to produce a prediction calculation. The structure of the parsed model varies based on what kind of model is being processed. In general, it is consistent in what kind of information it expects from each model type. For example, in the example the <code>lm()</code> model object will return variables such as <code>sigma2</code>, which would not be used in other model types, such as decision trees.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="kw">library</span>(tidypredict)</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3">parsed &lt;-<span class="st"> </span><span class="kw">parse_model</span>(model)</a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="kw">str</span>(parsed, <span class="dv">2</span>)</a>
-<a class="sourceLine" id="cb2-5" data-line-number="5"><span class="co">#&gt; List of 2</span></a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"><span class="co">#&gt;  $ general:List of 6</span></a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="co">#&gt;   ..$ version : num 2</span></a>
-<a class="sourceLine" id="cb2-9" data-line-number="9"><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"><span class="co">#&gt;   ..$ residual: int 26</span></a>
-<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="co">#&gt;   ..$ sigma2  : num 5.91</span></a>
-<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="co">#&gt;   ..$ is_glm  : num 0</span></a>
-<a class="sourceLine" id="cb2-13" data-line-number="13"><span class="co">#&gt;  $ terms  :List of 6</span></a>
-<a class="sourceLine" id="cb2-14" data-line-number="14"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-15" data-line-number="15"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-16" data-line-number="16"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-17" data-line-number="17"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-18" data-line-number="18"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-19" data-line-number="19"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb2-20" data-line-number="20"><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">library</span>(tidypredict)</span>
+<span id="cb2-2"><a href="#cb2-2"></a></span>
+<span id="cb2-3"><a href="#cb2-3"></a>parsed &lt;-<span class="st"> </span><span class="kw">parse_model</span>(model)</span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="kw">str</span>(parsed, <span class="dv">2</span>)</span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="co">#&gt; List of 2</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a><span class="co">#&gt;  $ general:List of 6</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10"></a><span class="co">#&gt;   ..$ residual: int 26</span></span>
+<span id="cb2-11"><a href="#cb2-11"></a><span class="co">#&gt;   ..$ sigma2  : num 5.91</span></span>
+<span id="cb2-12"><a href="#cb2-12"></a><span class="co">#&gt;   ..$ is_glm  : num 0</span></span>
+<span id="cb2-13"><a href="#cb2-13"></a><span class="co">#&gt;  $ terms  :List of 6</span></span>
+<span id="cb2-14"><a href="#cb2-14"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-15"><a href="#cb2-15"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-16"><a href="#cb2-16"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-18"><a href="#cb2-18"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-19"><a href="#cb2-19"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb2-20"><a href="#cb2-20"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
 <p>Usually, we pass an R model object to functions such as: <code>tidypredict_fit()</code>, and <code>tidypredict_sql()</code>. These functions also accept a previously parsed model.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="kw">tidypredict_fit</span>(parsed)</a>
-<a class="sourceLine" id="cb3-2" data-line-number="2"><span class="co">#&gt; 53.5256637443325 + (wt * -6.38154597431604) + (disp * -0.0458426921825966) + </span></a>
-<a class="sourceLine" id="cb3-3" data-line-number="3"><span class="co">#&gt;     (cyl * -3.6302556793944) + (wt * cyl * 0.535604359938273) + </span></a>
-<a class="sourceLine" id="cb3-4" data-line-number="4"><span class="co">#&gt;     (disp * cyl * 0.00540618405824797)</span></a></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">tidypredict_fit</span>(parsed)</span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="co">#&gt; 53.5256637443325 + (wt * -6.38154597431604) + (disp * -0.0458426921825966) + </span></span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="co">#&gt;     (cyl * -3.6302556793944) + (wt * cyl * 0.535604359938273) + </span></span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="co">#&gt;     (disp * cyl * 0.00540618405824797)</span></span></code></pre></div>
 </div>
 <div id="saving-the-model" class="section level2">
 <h2>Saving the model</h2>
 <p>Saving the model is quite easy, use the package such as <code>yaml</code> to write the model object as a YAML file. Any format that can persist a ragged list object should work as well.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">library</span>(yaml)</a>
-<a class="sourceLine" id="cb4-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb4-3" data-line-number="3"><span class="kw">write_yaml</span>(parsed, <span class="st">&quot;my_model.yml&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">library</span>(yaml)</span>
+<span id="cb4-2"><a href="#cb4-2"></a></span>
+<span id="cb4-3"><a href="#cb4-3"></a><span class="kw">write_yaml</span>(parsed, <span class="st">&quot;my_model.yml&quot;</span>)</span></code></pre></div>
 </div>
 <div id="re-load-the-model" class="section level2">
 <h2>Re-load the model</h2>
 <p>In a new R session, we can read the YAML file into our environment.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" data-line-number="1"><span class="kw">library</span>(tidypredict)</a>
-<a class="sourceLine" id="cb5-2" data-line-number="2"><span class="kw">library</span>(yaml)</a>
-<a class="sourceLine" id="cb5-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb5-4" data-line-number="4">loaded_model &lt;-<span class="st"> </span><span class="kw">read_yaml</span>(<span class="st">&quot;my_model&quot;</span>)</a>
-<a class="sourceLine" id="cb5-5" data-line-number="5"></a>
-<a class="sourceLine" id="cb5-6" data-line-number="6">loaded_model &lt;-<span class="st"> </span><span class="kw">as_parsed_model</span>(loaded_model)</a></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">library</span>(tidypredict)</span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="kw">library</span>(yaml)</span>
+<span id="cb5-3"><a href="#cb5-3"></a></span>
+<span id="cb5-4"><a href="#cb5-4"></a>loaded_model &lt;-<span class="st"> </span><span class="kw">read_yaml</span>(<span class="st">&quot;my_model&quot;</span>)</span>
+<span id="cb5-5"><a href="#cb5-5"></a></span>
+<span id="cb5-6"><a href="#cb5-6"></a>loaded_model &lt;-<span class="st"> </span><span class="kw">as_parsed_model</span>(loaded_model)</span></code></pre></div>
 <p>The preview of the file looks exactly as the preview of the original parsed model.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">str</span>(loaded_model, <span class="dv">2</span>)</a>
-<a class="sourceLine" id="cb6-2" data-line-number="2"><span class="co">#&gt; List of 2</span></a>
-<a class="sourceLine" id="cb6-3" data-line-number="3"><span class="co">#&gt;  $ general:List of 6</span></a>
-<a class="sourceLine" id="cb6-4" data-line-number="4"><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></a>
-<a class="sourceLine" id="cb6-5" data-line-number="5"><span class="co">#&gt;   ..$ version : num 2</span></a>
-<a class="sourceLine" id="cb6-6" data-line-number="6"><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></a>
-<a class="sourceLine" id="cb6-7" data-line-number="7"><span class="co">#&gt;   ..$ residual: int 26</span></a>
-<a class="sourceLine" id="cb6-8" data-line-number="8"><span class="co">#&gt;   ..$ sigma2  : num 5.91</span></a>
-<a class="sourceLine" id="cb6-9" data-line-number="9"><span class="co">#&gt;   ..$ is_glm  : num 0</span></a>
-<a class="sourceLine" id="cb6-10" data-line-number="10"><span class="co">#&gt;  $ terms  :List of 6</span></a>
-<a class="sourceLine" id="cb6-11" data-line-number="11"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-12" data-line-number="12"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-13" data-line-number="13"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-14" data-line-number="14"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-15" data-line-number="15"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-16" data-line-number="16"><span class="co">#&gt;   ..$ :List of 5</span></a>
-<a class="sourceLine" id="cb6-17" data-line-number="17"><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></a></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">str</span>(loaded_model, <span class="dv">2</span>)</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="co">#&gt; List of 2</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="co">#&gt;  $ general:List of 6</span></span>
+<span id="cb6-4"><a href="#cb6-4"></a><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="co">#&gt;   ..$ residual: int 26</span></span>
+<span id="cb6-8"><a href="#cb6-8"></a><span class="co">#&gt;   ..$ sigma2  : num 5.91</span></span>
+<span id="cb6-9"><a href="#cb6-9"></a><span class="co">#&gt;   ..$ is_glm  : num 0</span></span>
+<span id="cb6-10"><a href="#cb6-10"></a><span class="co">#&gt;  $ terms  :List of 6</span></span>
+<span id="cb6-11"><a href="#cb6-11"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-12"><a href="#cb6-12"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-13"><a href="#cb6-13"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-14"><a href="#cb6-14"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-15"><a href="#cb6-15"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-16"><a href="#cb6-16"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-17"><a href="#cb6-17"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
 <p><code>tidypredict</code> is able to read the new R variable and use it to create the formula.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="kw">tidypredict_fit</span>(loaded_model)</a>
-<a class="sourceLine" id="cb7-2" data-line-number="2"><span class="co">#&gt; 53.5256637 + (wt * -6.381546) + (disp * -0.0458427) + (cyl * </span></a>
-<a class="sourceLine" id="cb7-3" data-line-number="3"><span class="co">#&gt;     -3.6302557) + (wt * cyl * 0.5356044) + (disp * cyl * 0.0054062)</span></a></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="kw">tidypredict_fit</span>(loaded_model)</span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="co">#&gt; 53.5256637 + (wt * -6.381546) + (disp * -0.0458427) + (cyl * </span></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="co">#&gt;     -3.6302557) + (wt * cyl * 0.5356044) + (disp * cyl * 0.0054062)</span></span></code></pre></div>
 <p>The same variable can be used with other <code>tidypredict</code> functions, such as <code>tidypredict_sql()</code></p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw">tidypredict_sql</span>(loaded_model, dbplyr<span class="op">::</span><span class="kw">simulate_odbc</span>())</a>
-<a class="sourceLine" id="cb8-2" data-line-number="2"><span class="co">#&gt; &lt;SQL&gt; 53.5256637 + (`wt` * -6.381546) + (`disp` * -0.0458427) + (`cyl` * -3.6302557) + (`wt` * `cyl` * 0.5356044) + (`disp` * `cyl` * 0.0054062)</span></a></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a><span class="kw">tidypredict_sql</span>(loaded_model, dbplyr<span class="op">::</span><span class="kw">simulate_odbc</span>())</span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="co">#&gt; &lt;SQL&gt; 53.5256637 + (`wt` * -6.381546) + (`disp` * -0.0458427) + (`cyl` * -3.6302557) + (`wt` * `cyl` * 0.5356044) + (`disp` * `cyl` * 0.0054062)</span></span></code></pre></div>
 </div>
 <div id="broom" class="section level2">
 <h2><code>broom</code></h2>
 <p>The <code>parsed_model</code> object integrates with <code>tidy()</code> from <code>broom</code>.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1"><span class="kw">tidy</span>(loaded_model)</a>
-<a class="sourceLine" id="cb9-2" data-line-number="2"><span class="co">#&gt; # A tibble: 6 x 2</span></a>
-<a class="sourceLine" id="cb9-3" data-line-number="3"><span class="co">#&gt;   term        estimate</span></a>
-<a class="sourceLine" id="cb9-4" data-line-number="4"><span class="co">#&gt;   &lt;chr&gt;          &lt;dbl&gt;</span></a>
-<a class="sourceLine" id="cb9-5" data-line-number="5"><span class="co">#&gt; 1 (Intercept) 53.5    </span></a>
-<a class="sourceLine" id="cb9-6" data-line-number="6"><span class="co">#&gt; 2 wt          -6.38   </span></a>
-<a class="sourceLine" id="cb9-7" data-line-number="7"><span class="co">#&gt; 3 disp        -0.0458 </span></a>
-<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="co">#&gt; 4 cyl         -3.63   </span></a>
-<a class="sourceLine" id="cb9-9" data-line-number="9"><span class="co">#&gt; 5 wt:cyl       0.536  </span></a>
-<a class="sourceLine" id="cb9-10" data-line-number="10"><span class="co">#&gt; 6 disp:cyl     0.00541</span></a></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a><span class="kw">tidy</span>(loaded_model)</span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="co">#&gt; # A tibble: 6 x 2</span></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="co">#&gt;   term        estimate</span></span>
+<span id="cb9-4"><a href="#cb9-4"></a><span class="co">#&gt;   &lt;chr&gt;          &lt;dbl&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5"></a><span class="co">#&gt; 1 (Intercept) 53.5    </span></span>
+<span id="cb9-6"><a href="#cb9-6"></a><span class="co">#&gt; 2 wt          -6.38   </span></span>
+<span id="cb9-7"><a href="#cb9-7"></a><span class="co">#&gt; 3 disp        -0.0458 </span></span>
+<span id="cb9-8"><a href="#cb9-8"></a><span class="co">#&gt; 4 cyl         -3.63   </span></span>
+<span id="cb9-9"><a href="#cb9-9"></a><span class="co">#&gt; 5 wt:cyl       0.536  </span></span>
+<span id="cb9-10"><a href="#cb9-10"></a><span class="co">#&gt; 6 disp:cyl     0.00541</span></span></code></pre></div>
 </div>
 
 

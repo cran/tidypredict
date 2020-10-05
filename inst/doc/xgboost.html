@@ -377,7 +377,13 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb1-12"><a href="#cb1-12"></a>model &lt;-<span class="st"> </span>xgboost<span class="op">::</span><span class="kw">xgb.train</span>(</span>
 <span id="cb1-13"><a href="#cb1-13"></a>  <span class="dt">params =</span> <span class="kw">list</span>(<span class="dt">max_depth =</span> <span class="dv">2</span>, <span class="dt">silent =</span> <span class="dv">1</span>, <span class="dt">objective =</span> <span class="st">&quot;binary:logistic&quot;</span>, <span class="dt">base_score =</span> <span class="fl">0.5</span>),</span>
 <span id="cb1-14"><a href="#cb1-14"></a>  <span class="dt">data =</span> xgb_bin_data, <span class="dt">nrounds =</span> <span class="dv">50</span></span>
-<span id="cb1-15"><a href="#cb1-15"></a>)</span></code></pre></div>
+<span id="cb1-15"><a href="#cb1-15"></a>)</span>
+<span id="cb1-16"><a href="#cb1-16"></a><span class="co">#&gt; [08:01:04] </span><span class="al">WARNING</span><span class="co">: amalgamation/../src/learner.cc:480: </span></span>
+<span id="cb1-17"><a href="#cb1-17"></a><span class="co">#&gt; Parameters: { silent } might not be used.</span></span>
+<span id="cb1-18"><a href="#cb1-18"></a><span class="co">#&gt; </span></span>
+<span id="cb1-19"><a href="#cb1-19"></a><span class="co">#&gt;   This may not be accurate due to some parameters are only used in language bindings but</span></span>
+<span id="cb1-20"><a href="#cb1-20"></a><span class="co">#&gt;   passed down to XGBoost core.  Or some parameters are not used but slip through this</span></span>
+<span id="cb1-21"><a href="#cb1-21"></a><span class="co">#&gt;   verification. Please open an issue if you find above cases.</span></span></code></pre></div>
 <ul>
 <li><p>Create the R formula</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">tidypredict_fit</span>(model)</span>
@@ -514,7 +520,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb7-5"><a href="#cb7-5"></a><span class="co">#&gt;   ..$ model        : chr &quot;xgb.Booster&quot;</span></span>
 <span id="cb7-6"><a href="#cb7-6"></a><span class="co">#&gt;   ..$ type         : chr &quot;xgb&quot;</span></span>
 <span id="cb7-7"><a href="#cb7-7"></a><span class="co">#&gt;   ..$ niter        : num 50</span></span>
-<span id="cb7-8"><a href="#cb7-8"></a><span class="co">#&gt;   ..$ params       :List of 4</span></span>
+<span id="cb7-8"><a href="#cb7-8"></a><span class="co">#&gt;   ..$ params       :List of 5</span></span>
 <span id="cb7-9"><a href="#cb7-9"></a><span class="co">#&gt;   ..$ feature_names: chr [1:10] &quot;mpg&quot; &quot;cyl&quot; &quot;disp&quot; &quot;hp&quot; ...</span></span>
 <span id="cb7-10"><a href="#cb7-10"></a><span class="co">#&gt;   ..$ nfeatures    : int 10</span></span>
 <span id="cb7-11"><a href="#cb7-11"></a><span class="co">#&gt;   ..$ version      : num 1</span></span>

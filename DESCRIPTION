@@ -1,5 +1,5 @@
 Package: tidypredict
-Version: 0.4.7
+Version: 0.4.8
 Title: Run Predictions Inside the Database
 Description: It parses a fitted 'R' model object, and returns a formula
     in 'Tidy Eval' code that calculates the predictions.
@@ -23,8 +23,8 @@ RoxygenNote: 7.1.1.9000
 Encoding: UTF-8
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2020-10-05 12:01:05 UTC; max
+Packaged: 2020-10-28 00:22:52 UTC; max
 Author: Max Kuhn [aut, cre]
 Maintainer: Max Kuhn <max@rstudio.com>
 Repository: CRAN
-Date/Publication: 2020-10-05 13:50:03 UTC
+Date/Publication: 2020-10-28 06:50:02 UTC

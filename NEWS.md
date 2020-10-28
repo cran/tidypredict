@@ -1,3 +1,7 @@
+# tidypredict 0.4.8
+
+- CRAN submission for a broken test case. 
+
 # tidypredict 0.4.7
 
 - Change to with with version 5.1.2 and above of the `earth` package. As a result, `tidypredict` will only parse objects created by this and later versions of `earth`. 

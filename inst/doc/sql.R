@@ -1,3 +1,10 @@
+## ----pre, include = FALSE-----------------------------------------------------
+if (!rlang::is_installed("randomForest")) {
+  knitr::opts_chunk$set(
+    eval = FALSE
+  )
+}
+
 ## ----setup, include=FALSE-----------------------------------------------------
 library(dplyr)
 library(tidypredict)

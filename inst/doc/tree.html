@@ -27,22 +27,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
   }
 });
 </script>
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -51,7 +35,9 @@ document.addEventListener('DOMContentLoaded', function() {
   div.column{display: inline-block; vertical-align: top; width: 50%;}
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
-      </style>
+    </style>
+
+
 
 
 
@@ -255,15 +241,15 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <table style="width:100%;">
 <colgroup>
-<col width="5%"></col>
-<col width="5%"></col>
-<col width="8%"></col>
-<col width="7%"></col>
-<col width="7%"></col>
-<col width="8%"></col>
-<col width="42%"></col>
-<col width="6%"></col>
-<col width="8%"></col>
+<col width="5%" />
+<col width="5%" />
+<col width="8%" />
+<col width="7%" />
+<col width="7%" />
+<col width="8%" />
+<col width="42%" />
+<col width="6%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -429,7 +415,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="left"></td>
 <td align="left"></td>
 <td align="left">type</td>
-<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for intercept</td>
+<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for
+intercept</td>
 <td align="left">Yes</td>
 <td align="left">conditional</td>
 </tr>
@@ -561,7 +548,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="left"></td>
 <td align="left">type</td>
 <td align="left"></td>
-<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for intercept</td>
+<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for
+intercept</td>
 <td align="left">MARS only</td>
 <td align="left">conditional</td>
 </tr>

@@ -27,22 +27,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
   }
 });
 </script>
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -51,76 +35,23 @@ document.addEventListener('DOMContentLoaded', function() {
   div.column{display: inline-block; vertical-align: top; width: 50%;}
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
-      pre > code.sourceCode { white-space: pre; position: relative; }
-      pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-      pre > code.sourceCode > span:empty { height: 1.2em; }
-      code.sourceCode > span { color: inherit; text-decoration: inherit; }
-      div.sourceCode { margin: 1em 0; }
-      pre.sourceCode { margin: 0; }
-      @media screen {
-      div.sourceCode { overflow: auto; }
-      }
-      @media print {
-      pre > code.sourceCode { white-space: pre-wrap; }
-      pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-      }
-      pre.numberSource code
-        { counter-reset: source-line 0; }
-      pre.numberSource code > span
-        { position: relative; left: -4em; counter-increment: source-line; }
-      pre.numberSource code > span > a:first-child::before
-        { content: counter(source-line);
-          position: relative; left: -1em; text-align: right; vertical-align: baseline;
-          border: none; display: inline-block;
-          -webkit-touch-callout: none; -webkit-user-select: none;
-          -khtml-user-select: none; -moz-user-select: none;
-          -ms-user-select: none; user-select: none;
-          padding: 0 4px; width: 4em;
-          color: #aaaaaa;
-        }
-      pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-      div.sourceCode
-        {   }
-      @media screen {
-      pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-      }
-      code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-      code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-      code span.at { color: #7d9029; } /* Attribute */
-      code span.bn { color: #40a070; } /* BaseN */
-      code span.bu { } /* BuiltIn */
-      code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-      code span.ch { color: #4070a0; } /* Char */
-      code span.cn { color: #880000; } /* Constant */
-      code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-      code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-      code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-      code span.dt { color: #902000; } /* DataType */
-      code span.dv { color: #40a070; } /* DecVal */
-      code span.er { color: #ff0000; font-weight: bold; } /* Error */
-      code span.ex { } /* Extension */
-      code span.fl { color: #40a070; } /* Float */
-      code span.fu { color: #06287e; } /* Function */
-      code span.im { } /* Import */
-      code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-      code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-      code span.op { color: #666666; } /* Operator */
-      code span.ot { color: #007020; } /* Other */
-      code span.pp { color: #bc7a00; } /* Preprocessor */
-      code span.sc { color: #4070a0; } /* SpecialChar */
-      code span.ss { color: #bb6688; } /* SpecialString */
-      code span.st { color: #4070a0; } /* String */
-      code span.va { color: #19177c; } /* Variable */
-      code span.vs { color: #4070a0; } /* VerbatimString */
-      code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
     </style>
 
 
-<style type="text/css">code{white-space: pre;}</style>
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
@@ -203,6 +134,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   }
 })();
 </script>
+
 
 
 
@@ -402,10 +334,20 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<p>A model that is trained in any language are able to integrate with <code>tidypredict</code>, and thus with <code>broom</code>. The requirement is that the model in that language is exported using the parse model spec. The easiest file format would be YAML.</p>
+<p>A model that is trained in any language are able to integrate with
+<code>tidypredict</code>, and thus with <code>broom</code>. The
+requirement is that the model in that language is exported using the
+parse model spec. The easiest file format would be YAML.</p>
 <div id="python-example" class="section level2">
 <h2>python example</h2>
-<p>A model that was fitted using <code>sklearn</code>’s <code>linear_model</code>. The model is based on diabetes data. Ten baseline variables, age, sex, body mass index, average blood pressure, and six blood serum measurements were obtained for each of n = 442 diabetes patients, as well as the response of interest, a quantitative measure of disease progression one year after baseline. The model’s results were converted to YAML by the same python script, I copied and pasted the top part here:</p>
+<p>A model that was fitted using <code>sklearn</code>’s
+<code>linear_model</code>. The model is based on diabetes data. Ten
+baseline variables, age, sex, body mass index, average blood pressure,
+and six blood serum measurements were obtained for each of n = 442
+diabetes patients, as well as the response of interest, a quantitative
+measure of disease progression one year after baseline. The model’s
+results were converted to YAML by the same python script, I copied and
+pasted the top part here:</p>
 <pre><code>general:
   is_glm: 0
   model: lm
@@ -423,105 +365,117 @@ terms:
 </div>
 <div id="read-in-r" class="section level2">
 <h2>Read in R</h2>
-<p>The YAML data can be read in R by using the <code>yaml</code> package. In this example, we have copy-pasted most of the models inside a variable called <code>sklearn_model</code>. Because <code>yaml</code> requires local YAML variables to be split by line, we use <code>strsplit()</code>.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">library</span>(yaml)</span>
-<span id="cb2-2"><a href="#cb2-2"></a></span>
-<span id="cb2-3"><a href="#cb2-3"></a>sklearn_model &lt;-<span class="st"> </span><span class="kw">strsplit</span>(<span class="st">&quot;general:</span></span>
-<span id="cb2-4"><a href="#cb2-4"></a><span class="st">  is_glm: 0</span></span>
-<span id="cb2-5"><a href="#cb2-5"></a><span class="st">  model: lm</span></span>
-<span id="cb2-6"><a href="#cb2-6"></a><span class="st">  residual: 0</span></span>
-<span id="cb2-7"><a href="#cb2-7"></a><span class="st">  sigma2: 0</span></span>
-<span id="cb2-8"><a href="#cb2-8"></a><span class="st">  type: regression</span></span>
-<span id="cb2-9"><a href="#cb2-9"></a><span class="st">  version: 2.0</span></span>
-<span id="cb2-10"><a href="#cb2-10"></a><span class="st">terms:</span></span>
-<span id="cb2-11"><a href="#cb2-11"></a><span class="st">- coef: 152.76430691633442</span></span>
-<span id="cb2-12"><a href="#cb2-12"></a><span class="st">  fields:</span></span>
-<span id="cb2-13"><a href="#cb2-13"></a><span class="st">  - col: (Intercept)</span></span>
-<span id="cb2-14"><a href="#cb2-14"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-15"><a href="#cb2-15"></a><span class="st">  is_intercept: 1</span></span>
-<span id="cb2-16"><a href="#cb2-16"></a><span class="st">  label: (Intercept)</span></span>
-<span id="cb2-17"><a href="#cb2-17"></a><span class="st">- coef: 0.3034995490660432</span></span>
-<span id="cb2-18"><a href="#cb2-18"></a><span class="st">  fields:</span></span>
-<span id="cb2-19"><a href="#cb2-19"></a><span class="st">  - col: age</span></span>
-<span id="cb2-20"><a href="#cb2-20"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-21"><a href="#cb2-21"></a><span class="st">  is_intercept: 0</span></span>
-<span id="cb2-22"><a href="#cb2-22"></a><span class="st">  label: age</span></span>
-<span id="cb2-23"><a href="#cb2-23"></a><span class="st">- coef: -237.63931533353403</span></span>
-<span id="cb2-24"><a href="#cb2-24"></a><span class="st">  fields:</span></span>
-<span id="cb2-25"><a href="#cb2-25"></a><span class="st">  - col: sex</span></span>
-<span id="cb2-26"><a href="#cb2-26"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-27"><a href="#cb2-27"></a><span class="st">  is_intercept: 0</span></span>
-<span id="cb2-28"><a href="#cb2-28"></a><span class="st">  label: sex</span></span>
-<span id="cb2-29"><a href="#cb2-29"></a><span class="st">- coef: 510.5306054362253</span></span>
-<span id="cb2-30"><a href="#cb2-30"></a><span class="st">  fields:</span></span>
-<span id="cb2-31"><a href="#cb2-31"></a><span class="st">  - col: bmi</span></span>
-<span id="cb2-32"><a href="#cb2-32"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-33"><a href="#cb2-33"></a><span class="st">  is_intercept: 0</span></span>
-<span id="cb2-34"><a href="#cb2-34"></a><span class="st">  label: bmi</span></span>
-<span id="cb2-35"><a href="#cb2-35"></a><span class="st">- coef: 327.7369804093466</span></span>
-<span id="cb2-36"><a href="#cb2-36"></a><span class="st">  fields:</span></span>
-<span id="cb2-37"><a href="#cb2-37"></a><span class="st">  - col: bp</span></span>
-<span id="cb2-38"><a href="#cb2-38"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-39"><a href="#cb2-39"></a><span class="st">  is_intercept: 0</span></span>
-<span id="cb2-40"><a href="#cb2-40"></a><span class="st">  label: bp</span></span>
-<span id="cb2-41"><a href="#cb2-41"></a><span class="st">- coef: -814.1317093725387</span></span>
-<span id="cb2-42"><a href="#cb2-42"></a><span class="st">  fields:</span></span>
-<span id="cb2-43"><a href="#cb2-43"></a><span class="st">  - col: s1</span></span>
-<span id="cb2-44"><a href="#cb2-44"></a><span class="st">    type: ordinary</span></span>
-<span id="cb2-45"><a href="#cb2-45"></a><span class="st">  is_intercept: 0</span></span>
-<span id="cb2-46"><a href="#cb2-46"></a><span class="st">  label: s1</span></span>
-<span id="cb2-47"><a href="#cb2-47"></a><span class="st">&quot;</span>, <span class="dt">split =</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)[[<span class="dv">1</span>]]</span></code></pre></div>
-<p>Now the model is converted to an R <code>list</code> using <code>yaml.load</code>.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a>sklearn_model &lt;-<span class="st"> </span><span class="kw">yaml.load</span>(sklearn_model)</span>
-<span id="cb3-2"><a href="#cb3-2"></a></span>
-<span id="cb3-3"><a href="#cb3-3"></a><span class="kw">str</span>(sklearn_model, <span class="dv">2</span>)</span>
-<span id="cb3-4"><a href="#cb3-4"></a><span class="co">#&gt; List of 2</span></span>
-<span id="cb3-5"><a href="#cb3-5"></a><span class="co">#&gt;  $ general:List of 6</span></span>
-<span id="cb3-6"><a href="#cb3-6"></a><span class="co">#&gt;   ..$ is_glm  : int 0</span></span>
-<span id="cb3-7"><a href="#cb3-7"></a><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></span>
-<span id="cb3-8"><a href="#cb3-8"></a><span class="co">#&gt;   ..$ residual: int 0</span></span>
-<span id="cb3-9"><a href="#cb3-9"></a><span class="co">#&gt;   ..$ sigma2  : int 0</span></span>
-<span id="cb3-10"><a href="#cb3-10"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
-<span id="cb3-11"><a href="#cb3-11"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
-<span id="cb3-12"><a href="#cb3-12"></a><span class="co">#&gt;  $ terms  :List of 6</span></span>
-<span id="cb3-13"><a href="#cb3-13"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
-<span id="cb3-14"><a href="#cb3-14"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
-<span id="cb3-15"><a href="#cb3-15"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
-<span id="cb3-16"><a href="#cb3-16"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
-<span id="cb3-17"><a href="#cb3-17"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
-<span id="cb3-18"><a href="#cb3-18"></a><span class="co">#&gt;   ..$ :List of 4</span></span></code></pre></div>
+<p>The YAML data can be read in R by using the <code>yaml</code>
+package. In this example, we have copy-pasted most of the models inside
+a variable called <code>sklearn_model</code>. Because <code>yaml</code>
+requires local YAML variables to be split by line, we use
+<code>strsplit()</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(yaml)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>sklearn_model <span class="ot">&lt;-</span> <span class="fu">strsplit</span>(<span class="st">&quot;general:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">  is_glm: 0</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">  model: lm</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">  residual: 0</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="st">  sigma2: 0</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="st">  type: regression</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="st">  version: 2.0</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="st">terms:</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: 152.76430691633442</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: (Intercept)</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 1</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="st">  label: (Intercept)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: 0.3034995490660432</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: age</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 0</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="st">  label: age</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: -237.63931533353403</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: sex</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 0</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="st">  label: sex</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: 510.5306054362253</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: bmi</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 0</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="st">  label: bmi</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: 327.7369804093466</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: bp</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 0</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="st">  label: bp</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="st">- coef: -814.1317093725387</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="st">  fields:</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="st">  - col: s1</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="st">    type: ordinary</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="st">  is_intercept: 0</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="st">  label: s1</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;</span>, <span class="at">split =</span> <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)[[<span class="dv">1</span>]]</span></code></pre></div>
+<p>Now the model is converted to an R <code>list</code> using
+<code>yaml.load</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sklearn_model <span class="ot">&lt;-</span> <span class="fu">yaml.load</span>(sklearn_model)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(sklearn_model, <span class="dv">2</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 2</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ general:List of 6</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ is_glm  : int 0</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ model   : chr &quot;lm&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ residual: int 0</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ sigma2  : int 0</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ terms  :List of 6</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span></code></pre></div>
 </div>
 <div id="tidypredict" class="section level2">
 <h2><code>tidypredict</code></h2>
-<p>The <code>list</code> object needs to be recognized as a <code>tidypredict</code> parsed model. To do that, we use <code>as_parsed_model()</code></p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">library</span>(tidypredict)</span>
-<span id="cb4-2"><a href="#cb4-2"></a></span>
-<span id="cb4-3"><a href="#cb4-3"></a>spm &lt;-<span class="st"> </span><span class="kw">as_parsed_model</span>(sklearn_model)</span>
-<span id="cb4-4"><a href="#cb4-4"></a></span>
-<span id="cb4-5"><a href="#cb4-5"></a><span class="kw">class</span>(spm)</span>
-<span id="cb4-6"><a href="#cb4-6"></a><span class="co">#&gt; [1] &quot;parsed_model&quot;  &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
-<p>The <code>spm</code> variable now works just as any parsed model inside R. Use <code>tidypredict_fit()</code> to view the resulting formula.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a><span class="kw">tidypredict_fit</span>(spm)</span>
-<span id="cb5-2"><a href="#cb5-2"></a><span class="co">#&gt; 152.764306916334 + (age * 0.303499549066043) + (sex * -237.639315333534) + </span></span>
-<span id="cb5-3"><a href="#cb5-3"></a><span class="co">#&gt;     (bmi * 510.530605436225) + (bp * 327.736980409347) + (s1 * </span></span>
-<span id="cb5-4"><a href="#cb5-4"></a><span class="co">#&gt;     -814.131709372539)</span></span></code></pre></div>
+<p>The <code>list</code> object needs to be recognized as a
+<code>tidypredict</code> parsed model. To do that, we use
+<code>as_parsed_model()</code></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>spm <span class="ot">&lt;-</span> <span class="fu">as_parsed_model</span>(sklearn_model)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(spm)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] &quot;parsed_model&quot;  &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
+<p>The <code>spm</code> variable now works just as any parsed model
+inside R. Use <code>tidypredict_fit()</code> to view the resulting
+formula.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(spm)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 152.764306916334 + (age * 0.303499549066043) + (sex * -237.639315333534) + </span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     (bmi * 510.530605436225) + (bp * 327.736980409347) + (s1 * </span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     -814.131709372539)</span></span></code></pre></div>
 <p>Now, the model can run <strong>inside a database</strong></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1"></a><span class="kw">tidypredict_sql</span>(spm, dbplyr<span class="op">::</span><span class="kw">simulate_mssql</span>())</span>
-<span id="cb6-2"><a href="#cb6-2"></a><span class="co">#&gt; &lt;SQL&gt; 152.764306916334 + (`age` * 0.303499549066043) + (`sex` * -237.639315333534) + (`bmi` * 510.530605436225) + (`bp` * 327.736980409347) + (`s1` * -814.131709372539)</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(spm, dbplyr<span class="sc">::</span><span class="fu">simulate_mssql</span>())</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 152.764306916334 + (`age` * 0.303499549066043) + (`sex` * -237.639315333534) + (`bmi` * 510.530605436225) + (`bp` * 327.736980409347) + (`s1` * -814.131709372539)</span></span></code></pre></div>
 </div>
 <div id="broom" class="section level2">
 <h2><code>broom</code></h2>
-<p>Now that we have a <code>parsed_model</code> object, it is possible to use <code>broom</code>’s <code>tidy()</code> function. This means that we are able to integrate a totally external model, with <code>broom</code>.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a><span class="kw">tidy</span>(spm)</span>
-<span id="cb7-2"><a href="#cb7-2"></a><span class="co">#&gt; # A tibble: 6 x 2</span></span>
-<span id="cb7-3"><a href="#cb7-3"></a><span class="co">#&gt;   term        estimate</span></span>
-<span id="cb7-4"><a href="#cb7-4"></a><span class="co">#&gt;   &lt;chr&gt;          &lt;dbl&gt;</span></span>
-<span id="cb7-5"><a href="#cb7-5"></a><span class="co">#&gt; 1 (Intercept)  153.   </span></span>
-<span id="cb7-6"><a href="#cb7-6"></a><span class="co">#&gt; 2 age            0.303</span></span>
-<span id="cb7-7"><a href="#cb7-7"></a><span class="co">#&gt; 3 sex         -238.   </span></span>
-<span id="cb7-8"><a href="#cb7-8"></a><span class="co">#&gt; 4 bmi          511.   </span></span>
-<span id="cb7-9"><a href="#cb7-9"></a><span class="co">#&gt; 5 bp           328.   </span></span>
-<span id="cb7-10"><a href="#cb7-10"></a><span class="co">#&gt; 6 s1          -814.</span></span></code></pre></div>
+<p>Now that we have a <code>parsed_model</code> object, it is possible
+to use <code>broom</code>’s <code>tidy()</code> function. This means
+that we are able to integrate a totally external model, with
+<code>broom</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(spm)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; # A tibble: 6 × 2</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   term        estimate</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   &lt;chr&gt;          &lt;dbl&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1 (Intercept)  153.   </span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2 age            0.303</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3 sex         -238.   </span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4 bmi          511.   </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5 bp           328.   </span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6 s1          -814.</span></span></code></pre></div>
 </div>
 
 

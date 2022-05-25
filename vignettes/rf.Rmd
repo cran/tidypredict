@@ -2,10 +2,18 @@
 title: "Random Forest"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{rf}
+  %\VignetteIndexEntry{Random Forest}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+
+```{r pre, include = FALSE}
+if (!rlang::is_installed("randomForest")) {
+  knitr::opts_chunk$set(
+    eval = FALSE
+  )
+}
+```
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(

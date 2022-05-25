@@ -27,22 +27,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
   }
 });
 </script>
-<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
-// v0.0.1
-// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
-
-document.addEventListener('DOMContentLoaded', function() {
-  const codeList = document.getElementsByClassName("sourceCode");
-  for (var i = 0; i < codeList.length; i++) {
-    var linkList = codeList[i].getElementsByTagName('a');
-    for (var j = 0; j < linkList.length; j++) {
-      if (linkList[j].innerHTML === "") {
-        linkList[j].setAttribute('aria-hidden', 'true');
-      }
-    }
-  }
-});
-</script>
 
 <style type="text/css">
   code{white-space: pre-wrap;}
@@ -51,7 +35,9 @@ document.addEventListener('DOMContentLoaded', function() {
   div.column{display: inline-block; vertical-align: top; width: 50%;}
   div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
   ul.task-list{list-style: none;}
-      </style>
+    </style>
+
+
 
 
 
@@ -255,14 +241,14 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <table>
 <colgroup>
-<col width="6%"></col>
-<col width="6%"></col>
-<col width="9%"></col>
-<col width="6%"></col>
-<col width="6%"></col>
-<col width="48%"></col>
-<col width="6%"></col>
-<col width="9%"></col>
+<col width="6%" />
+<col width="6%" />
+<col width="9%" />
+<col width="6%" />
+<col width="6%" />
+<col width="48%" />
+<col width="6%" />
+<col width="9%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -453,7 +439,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="left"></td>
 <td align="left"></td>
 <td align="left">type</td>
-<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for intercept</td>
+<td align="left">Type of field, use: ‘conditional’, and ‘ordinary’ for
+intercept</td>
 <td align="left">Yes</td>
 <td align="left">conditional</td>
 </tr>
@@ -493,7 +480,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <td align="left">qr</td>
 <td align="left"></td>
 <td align="left"></td>
-<td align="left">Top level for QR decomposition <em>(If providing intervals)</em></td>
+<td align="left">Top level for QR decomposition <em>(If providing
+intervals)</em></td>
 <td align="left"></td>
 <td align="left"></td>
 </tr>

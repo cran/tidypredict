@@ -14,13 +14,10 @@ parse_model.earth <- function(model) {
   }
 
   is_glm <- !is.null(model$glm.list)
-
-  all_coefs <- model$coefficients
-  if (is_glm) all_coefs <- model$glm.coefficients
-
+  
   pm <- list()
   pm$general$model <- "earth"
-  pm$general$type <- "tree"
+  pm$general$type <- "regression"
   pm$general$version <- 2
   pm$general$is_glm <- 0
   if (is_glm) {
@@ -29,12 +26,12 @@ parse_model.earth <- function(model) {
     pm$general$family <- fam$family
     pm$general$link <- fam$link
   }
-  pm$terms <- mars_terms(model)
+  pm$terms <- mars_terms(model, is_glm)
   as_parsed_model(pm)
 }
 
 
-mars_terms <- function(mod) { 
+mars_terms <- function(mod, is_glm) { 
   feature_types <- 
     tibble::as_tibble(mod$dirs, rownames = "feature") %>% 
     dplyr::mutate(feature_num = dplyr::row_number()) %>% 
@@ -48,9 +45,16 @@ mars_terms <- function(mod) {
     tidyr::pivot_longer(cols = c(-feature, -feature_num),
                         values_to = "value",
                         names_to = "term")
+  
+  if (is_glm)  {
+    all_coefs <- mod$glm.coefficients
+  } else {
+    all_coefs <- mod$coefficients  
+  }
+
   feature_coefs <- 
     # Note coef(mod) formats data differently for logistic regression
-    tibble::as_tibble(mod$coefficients, rownames = "feature") %>% 
+    tibble::as_tibble(all_coefs, rownames = "feature") %>% 
     setNames(c("feature", "coefficient"))
   
   term_to_column <- 
@@ -58,11 +62,16 @@ mars_terms <- function(mod) {
     tidyr::pivot_longer(cols = c(-column),
                         values_to = "value",
                         names_to = "term") %>% 
-    dplyr::mutate(level = 
-                    case_when(
-                      value == 1 ~ stringr::str_remove(term, paste0("^", column)),
-                      TRUE ~ NA_character_)
-    ) %>% 
+    purrr::transpose() %>% 
+    purrr::map(~ {
+      if(.x$value == 1) {
+        .x$level <- gsub(.x$column, "", .x$term)  
+      } else {
+        .x$level <- NA
+      }
+      .x
+    }) %>% 
+    dplyr::bind_rows() %>% 
     dplyr::filter(value == 1) %>% 
     dplyr::select(-value)
   

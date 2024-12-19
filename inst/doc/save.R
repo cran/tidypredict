@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -18,25 +18,25 @@ str(parsed, 2)
 ## -----------------------------------------------------------------------------
 tidypredict_fit(parsed)
 
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 library(yaml)
 model_file <- tempfile(fileext = ".yml")
 write_yaml(parsed, model_file)
 loaded_model <- read_yaml(model_file)
 loaded_model <- as_parsed_model(loaded_model)
 
-## ---- eval = FALSE------------------------------------------------------------
-#  library(yaml)
-#  
-#  write_yaml(parsed, "my_model.yml")
+## ----eval = FALSE-------------------------------------------------------------
+# library(yaml)
+# 
+# write_yaml(parsed, "my_model.yml")
 
-## ---- eval = FALSE------------------------------------------------------------
-#  library(tidypredict)
-#  library(yaml)
-#  
-#  loaded_model <- read_yaml("my_model")
-#  
-#  loaded_model <- as_parsed_model(loaded_model)
+## ----eval = FALSE-------------------------------------------------------------
+# library(tidypredict)
+# library(yaml)
+# 
+# loaded_model <- read_yaml("my_model")
+# 
+# loaded_model <- as_parsed_model(loaded_model)
 
 ## -----------------------------------------------------------------------------
 str(loaded_model, 2)

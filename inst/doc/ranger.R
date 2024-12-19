@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -15,7 +15,7 @@ library(dplyr)
 library(tidypredict)
 library(ranger)
 
-model <- ranger(Species ~ .,data = iris, num.trees =  100)
+model <- ranger(Species ~ ., data = iris, num.trees = 100)
 
 ## -----------------------------------------------------------------------------
 treeInfo(model) %>%

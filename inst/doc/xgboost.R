@@ -1,5 +1,4 @@
 ## ----setup, include = FALSE---------------------------------------------------
-
 if (requireNamespace("xgboost", quietly = TRUE)) {
   library(tidypredict)
   library(xgboost)
@@ -14,7 +13,6 @@ knitr::opts_chunk$set(
   eval = eval_code
 )
 
-
 ## -----------------------------------------------------------------------------
 library(xgboost)
 
@@ -27,9 +25,9 @@ logregobj <- function(preds, dtrain) {
 }
 
 xgb_bin_data <- xgboost::xgb.DMatrix(
-  as.matrix(mtcars[, -9]), 
+  as.matrix(mtcars[, -9]),
   label = mtcars$am
-  )
+)
 
 model <- xgboost::xgb.train(
   params = list(max_depth = 2, objective = "binary:logistic", base_score = 0.5),

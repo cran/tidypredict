@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -14,7 +14,7 @@ library(tidypredict)
 
 df <- mtcars %>%
   mutate(char_cyl = paste0("cyl", cyl)) %>%
-  select(mpg, wt, char_cyl, am) 
+  select(mpg, wt, char_cyl, am)
 
 model <- lm(mpg ~ wt + char_cyl, offset = am, data = df)
 
@@ -25,7 +25,7 @@ tidypredict_sql(model, dbplyr::simulate_mssql())
 ## -----------------------------------------------------------------------------
 df %>%
   tidypredict_to_column(model) %>%
-  head(10) 
+  head(10)
 
 ## -----------------------------------------------------------------------------
 tidypredict_sql_interval(model, dbplyr::simulate_mssql())

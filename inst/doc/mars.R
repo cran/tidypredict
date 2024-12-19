@@ -31,8 +31,9 @@ tidypredict_test(model, etitanic)
 
 ## -----------------------------------------------------------------------------
 model <- earth(survived ~ .,
-               data = etitanic,
-               glm = list(family = binomial), degree = 2)
+  data = etitanic,
+  glm = list(family = binomial), degree = 2
+)
 
 tidypredict_fit(model)
 

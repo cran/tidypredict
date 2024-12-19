@@ -24,21 +24,21 @@ library(dbplyr)
 
 flights_table <- nycflights13::flights %>%
   mutate(
-    current_score = 0, 
+    current_score = 0,
     flight_id = row_number()
-    ) 
+  )
 
 ## -----------------------------------------------------------------------------
 library(DBI)
 
 con <- dbConnect(RSQLite::SQLite(), path = ":memory:")
-db_fligths <- copy_to(con,flights_table )
+db_fligths <- copy_to(con, flights_table)
 
 ## -----------------------------------------------------------------------------
 df <- db_fligths %>%
   select(dep_delay, hour, distance) %>%
   head(1000) %>%
-  collect() 
+  collect()
 
 ## -----------------------------------------------------------------------------
 model <- lm(dep_delay ~ ., data = df)
@@ -46,8 +46,8 @@ model <- lm(dep_delay ~ ., data = df)
 ## -----------------------------------------------------------------------------
 tidypredict_test(model)
 
-## ---- eval = FALSE------------------------------------------------------------
-#  if(tidypredict_test(model)$alert) stop("Threshold exceeded!")
+## ----eval = FALSE-------------------------------------------------------------
+# if (tidypredict_test(model)$alert) stop("Threshold exceeded!")
 
 ## -----------------------------------------------------------------------------
 library(dbplyr)
@@ -62,24 +62,26 @@ dbSendQuery(con, update_statement)
 ## -----------------------------------------------------------------------------
 db_fligths %>%
   select(current_score) %>%
-  head(10) 
-  
+  head(10)
 
 ## -----------------------------------------------------------------------------
-dbWriteTable(con, "daily_scores", 
-             tibble(
-               flight_id = 0,
-               score = 0,
-               date = ""
-             ))
+dbWriteTable(
+  con, "daily_scores",
+  tibble(
+    flight_id = 0,
+    score = 0,
+    date = ""
+  )
+)
 
 ## -----------------------------------------------------------------------------
 new_predictions <- db_fligths %>%
-  filter(month == 12) %>% 
+  filter(month == 12) %>%
   tidypredict_to_column(model, vars = "score") %>%
   select(
     flight_id,
-    score) %>%
+    score
+  ) %>%
   mutate(date = "01/01/2018")
 
 ## -----------------------------------------------------------------------------
@@ -95,6 +97,6 @@ tbl(con, "daily_scores") %>%
   filter(date == "01/01/2018") %>%
   select(dep_delay, hour, distance, score, date)
 
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 dbDisconnect(con)
 

@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -13,7 +13,7 @@ library(dplyr)
 
 df <- mtcars %>%
   mutate(char_cyl = paste0("cyl", cyl)) %>%
-  select(wt, char_cyl, am) 
+  select(wt, char_cyl, am)
 
 model <- glm(am ~ wt + char_cyl, data = df, family = "binomial")
 
@@ -24,7 +24,7 @@ tidypredict_sql(model, dbplyr::simulate_mssql())
 ## -----------------------------------------------------------------------------
 df %>%
   tidypredict_to_column(model) %>%
-  head(10) 
+  head(10)
 
 ## -----------------------------------------------------------------------------
 pm <- parse_model(model)

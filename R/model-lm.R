@@ -6,12 +6,6 @@ tidypredict_fit.lm <- function(model) {
   build_fit_formula(parsedmodel)
 }
 
-#' @export
-tidypredict_fit.glm <- function(model) {
-  parsedmodel <- parse_model(model)
-  build_fit_formula(parsedmodel)
-}
-
 build_fit_formula <- function(parsedmodel) {
   parsed_f <- map(
     parsedmodel$terms,
@@ -66,7 +60,7 @@ build_fit_formula <- function(parsedmodel) {
       f <- expr(exp(!!f))
     }
     if (assigned == 0) {
-      stop("Combination of family and link are not supported")
+      cli::cli_abort("Combination of family and link are not supported")
     }
   }
   f
@@ -76,9 +70,6 @@ build_fit_formula <- function(parsedmodel) {
 
 #' @export
 parse_model.lm <- function(model) parse_model_lm(model)
-
-#' @export
-parse_model.glm <- function(model) parse_model_lm(model)
 
 parse_model_lm <- function(model) {
   acceptable_formula(model)
@@ -152,7 +143,7 @@ parse_label_lm <- function(label, vars) {
 }
 
 parse_qr_lm <- function(label, qr) {
-  qrs <- qr[label == rownames(qr) ]
+  qrs <- qr[label == rownames(qr)]
   qrs <- set_names(
     as.list(qrs),
     paste0("qr_", 1:length(qrs))
@@ -165,12 +156,6 @@ parse_qr_lm <- function(label, qr) {
 tidypredict_interval.lm <- function(model, interval = 0.95) {
   parsedmodel <- parse_model(model)
   te_interval_lm(parsedmodel, interval)
-}
-
-#' @export
-tidypredict_interval.glm <- function(model, interval = 0.95) {
-  parsedmodel <- parse_model(model)
-  te_interval_glm(parsedmodel, interval)
 }
 
 get_qr_lm <- function(qr_name, parsedmodel) {
@@ -224,18 +209,4 @@ te_interval_lm <- function(parsedmodel, interval = 0.95) {
   qrs <- reduce(qrs_map, function(x, y) expr(!!x + (!!y)))
   tfrac <- qt(1 - (1 - 0.95) / 2, parsedmodel$general$residual)
   expr(!!tfrac * sqrt((!!qrs) + (!!parsedmodel$general$sigma2)))
-}
-
-te_interval_glm <- function(parsedmodel, interval = 0.95) {
-  intervals <- te_interval_lm(parsedmodel, interval)
-  family <- parsedmodel$general$family
-  link <- parsedmodel$general$link
-  assigned <- 0
-  if (family == "gaussian" && link == "identity") {
-    assigned <- 1
-  }
-  if (assigned == 0) {
-    stop("Combination of family and link are not supported for prediction intervals")
-  }
-  intervals
 }

@@ -49,7 +49,7 @@ overflow: visible;
 </style>
 <style type="text/css" data-origin="pandoc">
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span { line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +60,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -376,11 +376,11 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h2>How it works</h2>
 <p>Here is a simple <code>randomForest()</code> model using the
 <code>iris</code> dataset:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(Species <span class="sc">~</span> .,<span class="at">data =</span> iris ,<span class="at">ntree =</span> <span class="dv">100</span>, <span class="at">proximity =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris, <span class="at">ntree =</span> <span class="dv">100</span>, <span class="at">proximity =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="under-the-hood" class="section level2">
 <h2>Under the hood</h2>
@@ -388,31 +388,31 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <code>randomForest::getTree()</code> function. It will return as many
 decision paths as there are non-NA rows in the <code>prediction</code>
 field.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">getTree</span>(model, <span class="at">labelVar =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>()</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   left daughter right daughter    split var split point status prediction</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 1             2              3 Petal.Length        2.50      1       &lt;NA&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 2             0              0         &lt;NA&gt;        0.00     -1     setosa</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 3             4              5 Petal.Length        5.05      1       &lt;NA&gt;</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 4             6              7  Petal.Width        1.90      1       &lt;NA&gt;</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 5             0              0         &lt;NA&gt;        0.00     -1  virginica</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 6             8              9 Sepal.Length        4.95      1       &lt;NA&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">getTree</span>(model, <span class="at">labelVar =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">head</span>()</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;   left daughter right daughter    split var split point status prediction</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; 1             2              3 Petal.Length        2.50      1       &lt;NA&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; 2             0              0         &lt;NA&gt;        0.00     -1     setosa</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; 3             4              5 Petal.Length        5.05      1       &lt;NA&gt;</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; 4             6              7  Petal.Width        1.90      1       &lt;NA&gt;</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; 5             0              0         &lt;NA&gt;        0.00     -1  virginica</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; 6             8              9 Sepal.Length        4.95      1       &lt;NA&gt;</span></span></code></pre></div>
 <p>The output from <code>parse_model()</code> is transformed into a
 <code>dplyr</code>, a.k.a Tidy Eval, formula. The entire decision tree
 becomes one <code>dplyr::case_when()</code> statement</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)[<span class="dv">1</span>]</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [[1]]</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.5 ~ &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; </span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Petal.Width &gt;= 1.9 &amp; Petal.Length &lt; </span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Length &lt; </span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;virginica&quot;, Petal.Width &lt; 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; </span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;versicolor&quot;, Sepal.Width &lt; 3 &amp; Petal.Width &gt;= 1.75 &amp; </span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; </span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Width &gt;= </span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     3 &amp; Petal.Width &gt;= 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; </span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)[<span class="dv">1</span>]</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [[1]]</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.5 ~ &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;     Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Petal.Width &gt;= 1.9 &amp; Petal.Length &lt; </span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Length &lt; </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;     4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;virginica&quot;, Petal.Width &lt; 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; </span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;versicolor&quot;, Sepal.Width &lt; 3 &amp; Petal.Width &gt;= 1.75 &amp; </span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;     Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; </span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Width &gt;= </span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;     3 &amp; Petal.Width &gt;= 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; </span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;     1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
 <p>From there, the Tidy Eval formula can be used anywhere where it can
 be operated. <code>tidypredict</code> provides three paths:</p>
 <ul>
@@ -428,34 +428,34 @@ statement</li>
 <h2>parsnip</h2>
 <p><code>tidypredict</code> also supports <code>randomForest</code>
 model objects fitted via the <code>parsnip</code> package.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">rand_forest</span>(<span class="at">mode =</span> <span class="st">&quot;classification&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;randomForest&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fit</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)[[<span class="dv">1</span>]]</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;setosa&quot;, </span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.6 &amp; Petal.Length &gt;= 2.45 &amp; Sepal.Length &lt; </span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Width &gt;= 1.6 &amp; Petal.Length &gt;= </span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;virginica&quot;, Petal.Length &gt;= </span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; </span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;setosa&quot;, Petal.Width &gt;= </span></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Length &lt; 2.55 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; Petal.Length &gt;= 4.95 &amp; </span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.7 &amp; Petal.Length &gt;= 2.55 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         &quot;versicolor&quot;, Petal.Width &gt;= 1.7 &amp; Petal.Length &gt;= 2.55 &amp; </span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;virginica&quot;, Sepal.Length &lt; 6.5 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; </span></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, Sepal.Length &gt;= 6.5 &amp; </span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">rand_forest</span>(<span class="at">mode =</span> <span class="st">&quot;classification&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;randomForest&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="fu">fit</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)[[<span class="dv">1</span>]]</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;setosa&quot;, </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.6 &amp; Petal.Length &gt;= 2.45 &amp; Sepal.Length &lt; </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Width &gt;= 1.6 &amp; Petal.Length &gt;= </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;         2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;virginica&quot;, Petal.Length &gt;= </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;         4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;setosa&quot;, Petal.Width &gt;= </span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;         0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= </span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Length &lt; 2.55 &amp; Petal.Length &lt; </span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;         &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; Petal.Length &gt;= 4.95 &amp; </span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.7 &amp; Petal.Length &gt;= 2.55 &amp; Petal.Length &lt; </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;         &quot;versicolor&quot;, Petal.Width &gt;= 1.7 &amp; Petal.Length &gt;= 2.55 &amp; </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= </span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;virginica&quot;, Sepal.Length &lt; 6.5 &amp; Petal.Length &lt; </span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;         5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, Sepal.Length &gt;= 6.5 &amp; </span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= </span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
 </div>
 
 

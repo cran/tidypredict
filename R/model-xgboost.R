@@ -11,8 +11,8 @@ get_xgb_path <- function(row_id, tree) {
     }
   }
   purrr::map2(
-    path[1:length(path) - 1],
-    path[2:length(path)],
+    path[seq2(1, length(path) - 1)],
+    path[seq2(2, length(path))],
     ~ {
       rb <- tree[.y, ]
       if (rb["Yes"] %in% .x) {
@@ -48,17 +48,17 @@ get_xgb_tree <- function(tree) {
   x
 }
 
-get_xgb_trees <- function(model) {
+get_xgb_trees <- function(model, filter_trees = TRUE) {
   xd <- xgboost::xgb.dump(
     model = model,
     dump_format = "text",
     with_stats = TRUE
   )
   feature_names <- model$feature_names
-  get_xgb_trees_character(xd, feature_names)
+  get_xgb_trees_character(xd, feature_names, filter_trees)
 }
 
-get_xgb_trees_character <- function(xd, feature_names) {
+get_xgb_trees_character <- function(xd, feature_names, filter_trees) {
   feature_names_tbl <- data.frame(
     Feature = as.character(0:(length(feature_names) - 1)),
     feature_name = feature_names,
@@ -75,10 +75,12 @@ get_xgb_trees_character <- function(xd, feature_names) {
     lapply(trees[, c("Yes", "No", "Missing")], function(x) as.integer(x) + 1)
 
   trees_split <- split(trees, trees$Tree)
-  trees_rows <- purrr::map_dbl(trees_split, nrow)
-  trees_filtered <- trees_split[trees_rows > 1]
-  
-  purrr::map(trees_filtered, get_xgb_tree)
+  if (filter_trees) {
+    trees_rows <- purrr::map_dbl(trees_split, nrow)
+    trees_split <- trees_split[trees_rows > 1]
+  }
+
+  purrr::map(trees_split, get_xgb_tree)
 }
 
 #' @export
@@ -152,7 +154,7 @@ build_fit_formula_xgb <- function(parsedmodel) {
   if (is.null(objective)) {
     assigned <- 1
     f <- expr(!!f + !!base_score)
-    warning(
+    cli::cli_warn(
       paste(
         "If the objective is a custom function, please",
         "explicitly apply it to the output."
@@ -166,7 +168,7 @@ build_fit_formula_xgb <- function(parsedmodel) {
     f <- expr(1 - 1 / (1 + exp(!!f + log(!!base_score / (1 - !!base_score)))))
   }
   if (assigned == 0) {
-    stop(
+    cli::cli_abort(
       paste0(
         "Only objectives 'binary:logistic', 'reg:squarederror',",
         "'reg:logistic', 'binary:logitraw' are supported yet."
@@ -180,4 +182,38 @@ build_fit_formula_xgb <- function(parsedmodel) {
 tidypredict_fit.xgb.Booster <- function(model) {
   parsedmodel <- parse_model(model)
   build_fit_formula_xgb(parsedmodel)
+}
+
+# For {orbital}
+#' Extract processed xgboost trees
+#' 
+#' For use in orbital package.
+#' @keywords internal
+#' @export
+.extract_xgb_trees <- function(model) {
+  if (!inherits(model, "xgb.Booster")) {
+    cli::cli_abort(
+      "{.arg model} must be {.cls xgb.Booster}, not {.obj_type_friendly {x}}."
+    )
+  }
+
+  params <- model$params
+  wosilent <- params[names(params) != "silent"]
+  wosilent$silent <- params$silent
+
+  pm <- list()
+  pm$general$model <- "xgb.Booster"
+  pm$general$type <- "xgb"
+  pm$general$niter <- model$niter
+  pm$general$params <- wosilent
+  pm$general$feature_names <- model$feature_names
+  pm$general$nfeatures <- model$nfeatures
+  pm$general$version <- 1
+  pm$trees <- get_xgb_trees(model, filter_trees = FALSE)
+  
+  parsedmodel <- as_parsed_model(pm)
+  map(
+    seq_len(length(parsedmodel$trees)),
+    ~ expr(case_when(!!!get_xgb_case_tree(.x, parsedmodel)))
+  )
 }

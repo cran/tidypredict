@@ -11,7 +11,11 @@ library(dplyr)
 library(Cubist)
 data("BostonHousing", package = "mlbench")
 
-model <- Cubist::cubist(x = BostonHousing[, -14], y = BostonHousing$medv, committees = 3)
+model <- Cubist::cubist(
+  x = BostonHousing[, -14],
+  y = BostonHousing$medv,
+  committees = 3
+)
 
 ## -----------------------------------------------------------------------------
 tidypredict_fit(model)
@@ -25,9 +29,6 @@ library(dplyr)
 BostonHousing %>%
   tidypredict_to_column(model) %>%
   glimpse()
-
-## -----------------------------------------------------------------------------
-tidypredict_test(model, BostonHousing)
 
 ## -----------------------------------------------------------------------------
 pm <- parse_model(model)

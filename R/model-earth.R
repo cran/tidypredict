@@ -6,13 +6,6 @@ tidypredict_fit.earth <- function(model) {
 
 #' @export
 parse_model.earth <- function(model) {
-  if (any(names(model) == "terms")) {
-    vars <- attr(model$terms, "dataClasses")
-    vars_names <- names(vars)
-  } else {
-    vars_names <- rownames(model$modvars)
-  }
-
   is_glm <- !is.null(model$glm.list)
 
   pm <- list()
@@ -69,29 +62,39 @@ mars_terms <- function(mod, is_glm) {
       names_to = "term"
     ) %>%
     purrr::transpose() %>%
-    purrr::map(~ {
-      if (.x$value == 1) {
-        .x$level <- gsub(.x$column, "", .x$term)
-      } else {
-        .x$level <- NA
+    purrr::map(
+      ~ {
+        if (.x$value == 1) {
+          .x$level <- gsub(.x$column, "", .x$term)
+        } else {
+          .x$level <- NA
+        }
+        .x
       }
-      .x
-    }) %>%
+    ) %>%
     dplyr::bind_rows() %>%
     dplyr::filter(value == 1) %>%
     dplyr::select(-value)
 
   feature_types %>%
-    dplyr::full_join(feature_values, by = c("feature", "feature_num", "term")) %>%
+    dplyr::full_join(
+      feature_values,
+      by = c("feature", "feature_num", "term")
+    ) %>%
     dplyr::filter(type != 0) %>%
     dplyr::right_join(feature_coefs, by = "feature") %>%
-    dplyr::mutate(feature_num = ifelse(feature == "(Intercept)", 0, feature_num)) %>%
+    dplyr::mutate(
+      feature_num = ifelse(feature == "(Intercept)", 0, feature_num)
+    ) %>%
     dplyr::arrange(feature_num) %>%
     dplyr::left_join(term_to_column, by = "term") %>%
     dplyr::rowwise() %>%
     dplyr::mutate(lists = list(make_lists(type, column, value, level))) %>%
     dplyr::group_by(feature, feature_num) %>%
-    dplyr::summarize(final = collapse_lists(feature, coefficient, lists), .groups = "drop") %>%
+    dplyr::summarize(
+      final = collapse_lists(feature, coefficient, lists),
+      .groups = "drop"
+    ) %>%
     purrr::pluck("final")
 }
 
@@ -137,9 +140,6 @@ operation_list <- function(direction, column, split) {
 collapse_lists <- function(label, coef, lst) {
   label <- unique(label)
   coef <- unique(coef)
-  if (length(label) > 1) {
-    browser()
-  }
   list(
     list(
       label = label,

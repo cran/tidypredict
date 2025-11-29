@@ -13,11 +13,20 @@
 #' @param vars The name of the variables that this function will produce. Defaults to "fit", "upper", and "lower".
 #'
 #' @export
-tidypredict_to_column <- function(df, model, add_interval = FALSE,
-                                  interval = 0.95, vars = c("fit", "upper", "lower")) {
+tidypredict_to_column <- function(
+  df,
+  model,
+  add_interval = FALSE,
+  interval = 0.95,
+  vars = c("fit", "upper", "lower")
+) {
   fit_model <- tidypredict_fit(model)
 
-  if (inherits(fit_model, "list")) cli::cli_abort("tidypredict_to_column does not support tree based models")
+  if (inherits(fit_model, "list")) {
+    cli::cli_abort(
+      "{.fn tidypredict_to_column} does not support tree based models."
+    )
+  }
 
   fit <- vars[1]
   upper <- vars[2]
@@ -26,9 +35,12 @@ tidypredict_to_column <- function(df, model, add_interval = FALSE,
   df <- mutate(df, !!fit := !!fit_model)
 
   if (add_interval) {
-    formulas <- c(sym(fit), tidypredict_interval(model, interval = interval))
-    upper_formula <- reduce(formulas, function(l, r) expr((!!l) + (!!r)))
-    lower_formula <- reduce(formulas, function(l, r) expr((!!l) - (!!r)))
+    formulas <- c(
+      as.name(fit),
+      tidypredict_interval(model, interval = interval)
+    )
+    upper_formula <- reduce_addition(formulas)
+    lower_formula <- reduce_subtraction(formulas)
 
     df <- mutate(
       df,

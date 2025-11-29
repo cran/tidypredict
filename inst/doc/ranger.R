@@ -15,21 +15,21 @@ library(dplyr)
 library(tidypredict)
 library(ranger)
 
-model <- ranger(Species ~ ., data = iris, num.trees = 100)
+model <- ranger(mpg ~ ., data = mtcars, num.trees = 5, max.depth = 2)
 
 ## -----------------------------------------------------------------------------
 treeInfo(model) %>%
   head()
 
 ## -----------------------------------------------------------------------------
-tidypredict_fit(model)[1]
+tidypredict_fit(model)
 
 ## -----------------------------------------------------------------------------
 library(parsnip)
 
-parsnip_model <- rand_forest(mode = "classification") %>%
-  set_engine("ranger") %>%
-  fit(Species ~ ., data = iris)
+parsnip_model <- rand_forest(mode = "regression", trees = 5) %>%
+  set_engine("ranger", max.depth = 2) %>%
+  fit(mpg ~ ., data = mtcars)
 
-tidypredict_fit(parsnip_model)[[1]]
+tidypredict_fit(parsnip_model)
 

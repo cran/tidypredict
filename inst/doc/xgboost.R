@@ -31,7 +31,8 @@ xgb_bin_data <- xgboost::xgb.DMatrix(
 
 model <- xgboost::xgb.train(
   params = list(max_depth = 2, objective = "binary:logistic", base_score = 0.5),
-  data = xgb_bin_data, nrounds = 50
+  data = xgb_bin_data,
+  nrounds = 50
 )
 
 ## -----------------------------------------------------------------------------

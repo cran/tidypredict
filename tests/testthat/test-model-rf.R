@@ -1,42 +1,49 @@
-skip_if_not_installed("randomForest")
+test_that("returns the right output", {
+  set.seed(1234)
 
-run_tests <- function(model) {
+  model <- randomForest::randomForest(mpg ~ ., data = mtcars, ntree = 3)
+
   tf <- tidypredict_fit(model)
   pm <- parse_model(model)
 
-  test_that("Returns the correct type and dimensions", {
-    expect_s3_class(pm, "list")
-    expect_equal(length(pm), 2)
-    expect_equal(length(pm$trees), 100)
-    expect_equal(pm$general$model, "randomForest")
-    expect_equal(pm$general$version, 2)
-  })
-  test_that("Returns expected case_when() dplyr formula", {
-    expect_snapshot(
-      rlang::expr_text(tf[[1]])
-    )
-  })
-}
+  expect_type(tf, "language")
 
-set.seed(100)
-run_tests(
-  randomForest::randomForest(Species ~ ., data = iris, ntree = 100)
-)
+  expect_s3_class(pm, "list")
+  expect_equal(length(pm), 2)
+  expect_equal(length(pm$trees), 3)
+  expect_equal(pm$general$model, "randomForest")
+  expect_equal(pm$general$version, 2)
 
-set.seed(100)
-run_tests(
-  parsnip::fit(
-    parsnip::set_engine(parsnip::rand_forest(trees = 100, mode = "classification"), "randomForest"),
-    Species ~ .,
-    data = iris
+  expect_snapshot(
+    rlang::expr_text(tf)
   )
-)
+})
 
 test_that("Model can be saved and re-loaded", {
-  model <- randomForest::randomForest(Species ~ ., data = iris, ntree = 100)
+  set.seed(1234)
+
+  model <- randomForest::randomForest(mpg ~ ., data = mtcars, ntree = 3)
+
+  pm <- parse_model(model)
   mp <- tempfile(fileext = ".yml")
-  yaml::write_yaml(parse_model(model), mp)
+  yaml::write_yaml(pm, mp)
   l <- yaml::read_yaml(mp)
   pm <- as_parsed_model(l)
-  expect_snapshot(tidypredict_fit(pm))
+
+  expect_identical(
+    round_print(tidypredict_fit(model)),
+    round_print(tidypredict_fit(pm))
+  )
+})
+
+test_that("formulas produces correct predictions", {
+  set.seed(1234)
+
+  # regression
+  expect_snapshot(
+    tidypredict_test(
+      randomForest::randomForest(mpg ~ ., data = mtcars, ntree = 3),
+      mtcars,
+    )
+  )
 })

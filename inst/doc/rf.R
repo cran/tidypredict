@@ -22,21 +22,21 @@ library(dplyr)
 library(tidypredict)
 library(randomForest)
 
-model <- randomForest(Species ~ ., data = iris, ntree = 100, proximity = TRUE)
+model <- randomForest(mpg ~ ., data = mtcars, ntree = 5, proximity = TRUE)
 
 ## -----------------------------------------------------------------------------
 getTree(model, labelVar = TRUE) %>%
   head()
 
 ## -----------------------------------------------------------------------------
-tidypredict_fit(model)[1]
+tidypredict_fit(model)
 
 ## -----------------------------------------------------------------------------
 library(parsnip)
 
-parsnip_model <- rand_forest(mode = "classification") %>%
+parsnip_model <- rand_forest(mode = "regression", trees = 5) %>%
   set_engine("randomForest") %>%
-  fit(Species ~ ., data = iris)
+  fit(mpg ~ ., data = mtcars)
 
-tidypredict_fit(parsnip_model)[[1]]
+tidypredict_fit(parsnip_model)
 

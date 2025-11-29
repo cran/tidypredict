@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -375,12 +376,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="how-it-works" class="section level2">
 <h2>How it works</h2>
 <p>Here is a simple <code>randomForest()</code> model using the
-<code>iris</code> dataset:</p>
+<code>mtcars</code> dataset:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris, <span class="at">ntree =</span> <span class="dv">100</span>, <span class="at">proximity =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(mpg <span class="sc">~</span> ., <span class="at">data =</span> mtcars, <span class="at">ntree =</span> <span class="dv">5</span>, <span class="at">proximity =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="under-the-hood" class="section level2">
 <h2>Under the hood</h2>
@@ -390,29 +391,61 @@ decision paths as there are non-NA rows in the <code>prediction</code>
 field.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">getTree</span>(model, <span class="at">labelVar =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">head</span>()</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;   left daughter right daughter    split var split point status prediction</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; 1             2              3 Petal.Length        2.50      1       &lt;NA&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; 2             0              0         &lt;NA&gt;        0.00     -1     setosa</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; 3             4              5 Petal.Length        5.05      1       &lt;NA&gt;</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; 4             6              7  Petal.Width        1.90      1       &lt;NA&gt;</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; 5             0              0         &lt;NA&gt;        0.00     -1  virginica</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; 6             8              9 Sepal.Length        4.95      1       &lt;NA&gt;</span></span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;   left daughter right daughter split var split point status prediction</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt; 1             2              3      carb       1.500     -3   20.12813</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt; 2             4              5      gear       3.500     -3   28.82222</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; 3             6              7      disp     221.700     -3   16.72609</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt; 4             0              0      &lt;NA&gt;       0.000     -1   18.10000</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; 5             8              9        hp      65.500     -3   31.88571</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; 6            10             11        wt       3.295     -3   21.38333</span></span></code></pre></div>
 <p>The output from <code>parse_model()</code> is transformed into a
-<code>dplyr</code>, a.k.a Tidy Eval, formula. The entire decision tree
-becomes one <code>dplyr::case_when()</code> statement</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)[<span class="dv">1</span>]</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [[1]]</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.5 ~ &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; </span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;     Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Petal.Width &gt;= 1.9 &amp; Petal.Length &lt; </span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Length &lt; </span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;     4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;virginica&quot;, Petal.Width &lt; 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; </span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= </span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;     2.5 ~ &quot;versicolor&quot;, Sepal.Width &lt; 3 &amp; Petal.Width &gt;= 1.75 &amp; </span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;     Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; 1.9 &amp; Petal.Length &lt; </span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;     5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;virginica&quot;, Sepal.Width &gt;= </span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;     3 &amp; Petal.Width &gt;= 1.75 &amp; Sepal.Length &gt;= 4.95 &amp; Petal.Width &lt; </span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;     1.9 &amp; Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 2.5 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
+<code>dplyr</code>, a.k.a Tidy Eval, formula. Each decision tree becomes
+one <code>dplyr::case_when()</code> statement, which are then
+combined.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; (case_when(gear &lt; 3.5 &amp; carb &lt; 1.5 ~ 18.1, hp &lt; 65.5 &amp; gear &gt;= </span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt;     3.5 &amp; carb &lt; 1.5 ~ 33.9, wt &lt; 3.295 &amp; disp &lt; 221.7 &amp; carb &gt;= </span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt;     1.5 ~ 21.82, wt &gt;= 3.295 &amp; disp &lt; 221.7 &amp; carb &gt;= 1.5 ~ 19.2, </span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt;     wt &gt;= 4.66 &amp; disp &gt;= 221.7 &amp; carb &gt;= 1.5 ~ 10.4, qsec &lt; 19.185 &amp; </span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;         hp &gt;= 65.5 &amp; gear &gt;= 3.5 &amp; carb &lt; 1.5 ~ 27.3, qsec &gt;= </span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;         19.185 &amp; hp &gt;= 65.5 &amp; gear &gt;= 3.5 &amp; carb &lt; 1.5 ~ 32.4, </span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;     qsec &lt; 16.96 &amp; wt &lt; 4.66 &amp; disp &gt;= 221.7 &amp; carb &gt;= 1.5 ~ </span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;         14.94, hp &lt; 162.5 &amp; qsec &gt;= 16.96 &amp; wt &lt; 4.66 &amp; disp &gt;= </span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt;         221.7 &amp; carb &gt;= 1.5 ~ 15.2, carb &lt; 2.5 &amp; hp &gt;= 162.5 &amp; </span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt;         qsec &gt;= 16.96 &amp; wt &lt; 4.66 &amp; disp &gt;= 221.7 &amp; carb &gt;= 1.5 ~ </span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt;         19.2, .default = 16.34) + case_when(hp &lt; 65.5 &amp; hp &lt; </span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt;     95 ~ 31.5666666666667, wt &lt; 2.23 &amp; hp &gt;= 65.5 &amp; hp &lt; 95 ~ </span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt;     26.325, wt &gt;= 2.23 &amp; hp &gt;= 65.5 &amp; hp &lt; 95 ~ 22.8, qsec &lt; </span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;     17.62 &amp; hp &gt;= 190 &amp; hp &gt;= 95 ~ 14.325, qsec &gt;= 17.62 &amp; hp &gt;= </span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt;     190 &amp; hp &gt;= 95 ~ 10.4, hp &lt; 130 &amp; drat &lt; 3.385 &amp; hp &lt; 190 &amp; </span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 95 ~ 19.2, hp &gt;= 130 &amp; drat &lt; 3.385 &amp; hp &lt; 190 &amp; hp &gt;= </span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt;     95 ~ 17.025, gear &gt;= 4.5 &amp; drat &gt;= 3.385 &amp; hp &lt; 190 &amp; hp &gt;= </span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt;     95 ~ 19.7, vs &lt; 0.5 &amp; gear &lt; 4.5 &amp; drat &gt;= 3.385 &amp; hp &lt; 190 &amp; </span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 95 ~ 21, .default = 21.5) + case_when(qsec &lt; 18.755 &amp; </span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 142.9 ~ 22.8, qsec &gt;= 18.755 &amp; disp &lt; 142.9 ~ 28.74, </span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 163.8 &amp; wt &lt; 3.49 &amp; disp &gt;= 142.9 ~ 20.1333333333333, </span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt;     qsec &gt;= 17.71 &amp; wt &gt;= 3.49 &amp; disp &gt;= 142.9 ~ 10.4, gear &lt; </span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt;         3.5 &amp; disp &gt;= 163.8 &amp; wt &lt; 3.49 &amp; disp &gt;= 142.9 ~ 19.2, </span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt;     gear &gt;= 3.5 &amp; disp &gt;= 163.8 &amp; wt &lt; 3.49 &amp; disp &gt;= 142.9 ~ </span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt;         17.4, drat &lt; 2.915 &amp; hp &lt; 212.5 &amp; qsec &lt; 17.71 &amp; wt &gt;= </span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt;         3.49 &amp; disp &gt;= 142.9 ~ 15.5, drat &gt;= 2.915 &amp; hp &lt; 212.5 &amp; </span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt;         qsec &lt; 17.71 &amp; wt &gt;= 3.49 &amp; disp &gt;= 142.9 ~ 18.25, carb &lt; </span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;         6 &amp; hp &gt;= 212.5 &amp; qsec &lt; 17.71 &amp; wt &gt;= 3.49 &amp; disp &gt;= </span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;         142.9 ~ 13.7, .default = 15) + case_when(cyl &lt; 5 &amp; am &lt; </span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt;     0.5 ~ 22.55, wt &lt; 2.2775 &amp; am &gt;= 0.5 ~ 29.78, wt &gt;= 2.2775 &amp; </span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt;     am &gt;= 0.5 ~ 18.42, hp &gt;= 192.5 &amp; cyl &gt;= 5 &amp; am &lt; 0.5 ~ 13.84, </span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt;     hp &lt; 136.5 &amp; hp &lt; 192.5 &amp; cyl &gt;= 5 &amp; am &lt; 0.5 ~ 18.5, drat &lt; </span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt;         3.11 &amp; hp &gt;= 136.5 &amp; hp &lt; 192.5 &amp; cyl &gt;= 5 &amp; am &lt; 0.5 ~ </span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt;         17.075, .default = 17.3) + case_when(cyl &gt;= 5 &amp; hp &lt; </span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt;     116.5 ~ 21.1, qsec &gt;= 18.14 &amp; hp &gt;= 116.5 ~ 18.2666666666667, </span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt;     drat &gt;= 4.165 &amp; cyl &lt; 5 &amp; hp &lt; 116.5 ~ 32.15, hp &lt; 77.5 &amp; </span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt;         drat &lt; 4.165 &amp; cyl &lt; 5 &amp; hp &lt; 116.5 ~ 24.4, disp &lt; 337.9 &amp; </span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt;         hp &lt; 192.5 &amp; qsec &lt; 18.14 &amp; hp &gt;= 116.5 ~ 16.76, disp &gt;= </span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt;         337.9 &amp; hp &lt; 192.5 &amp; qsec &lt; 18.14 &amp; hp &gt;= 116.5 ~ 19.2, </span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt;     drat &lt; 3.105 &amp; hp &gt;= 192.5 &amp; qsec &lt; 18.14 &amp; hp &gt;= 116.5 ~ </span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt;         10.4, drat &gt;= 3.105 &amp; hp &gt;= 192.5 &amp; qsec &lt; 18.14 &amp; hp &gt;= </span></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt;         116.5 ~ 13.975, disp &lt; 114.05 &amp; hp &gt;= 77.5 &amp; drat &lt; 4.165 &amp; </span></span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="co">#&gt;         cyl &lt; 5 &amp; hp &lt; 116.5 ~ 22.8, .default = 21.7))/5L</span></span></code></pre></div>
 <p>From there, the Tidy Eval formula can be used anywhere where it can
 be operated. <code>tidypredict</code> provides three paths:</p>
 <ul>
@@ -430,32 +463,63 @@ statement</li>
 model objects fitted via the <code>parsnip</code> package.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">rand_forest</span>(<span class="at">mode =</span> <span class="st">&quot;classification&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">rand_forest</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">trees =</span> <span class="dv">5</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;randomForest&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="fu">fit</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> ., <span class="at">data =</span> mtcars)</span>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)[[<span class="dv">1</span>]]</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; case_when(Petal.Length &lt; 2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;setosa&quot;, </span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.6 &amp; Petal.Length &gt;= 2.45 &amp; Sepal.Length &lt; </span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Width &gt;= 1.6 &amp; Petal.Length &gt;= </span></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;         2.45 &amp; Sepal.Length &lt; 5.45 ~ &quot;virginica&quot;, Petal.Length &gt;= </span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;         4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; </span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;setosa&quot;, Petal.Width &gt;= </span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;         0.65 &amp; Petal.Length &lt; 4.7 &amp; Sepal.Length &lt; 5.75 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;versicolor&quot;, Petal.Length &lt; 2.55 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;         &quot;setosa&quot;, Petal.Length &gt;= 5.05 &amp; Petal.Length &gt;= 4.95 &amp; </span></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, </span></span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;     Petal.Width &lt; 1.7 &amp; Petal.Length &gt;= 2.55 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;         4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= 5.45 ~ </span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;         &quot;versicolor&quot;, Petal.Width &gt;= 1.7 &amp; Petal.Length &gt;= 2.55 &amp; </span></span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;         5.45 ~ &quot;virginica&quot;, Sepal.Length &lt; 6.5 &amp; Petal.Length &lt; </span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;         5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= 5.75 &amp; </span></span>
-<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt;         Sepal.Length &gt;= 5.45 ~ &quot;virginica&quot;, Sepal.Length &gt;= 6.5 &amp; </span></span>
-<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;         Petal.Length &lt; 5.05 &amp; Petal.Length &gt;= 4.95 &amp; Sepal.Length &gt;= </span></span>
-<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;         5.75 &amp; Sepal.Length &gt;= 5.45 ~ &quot;versicolor&quot;)</span></span></code></pre></div>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; (case_when(wt &lt; 2.0675 &amp; disp &lt; 107.6 ~ 30.5, wt &gt;= 2.0675 &amp; </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 107.6 ~ 32.4, drat &gt;= 4.175 &amp; wt &lt; 3.16 &amp; disp &gt;= </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;     107.6 ~ 26, hp &lt; 96 &amp; drat &lt; 4.175 &amp; wt &lt; 3.16 &amp; disp &gt;= </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;     107.6 ~ 22.8, hp &gt;= 96 &amp; drat &lt; 4.175 &amp; wt &lt; 3.16 &amp; disp &gt;= </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;     107.6 ~ 20.925, qsec &lt; 18.6 &amp; cyl &lt; 7 &amp; wt &gt;= 3.16 &amp; disp &gt;= </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;     107.6 ~ 19.2, qsec &gt;= 18.6 &amp; cyl &lt; 7 &amp; wt &gt;= 3.16 &amp; disp &gt;= </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;     107.6 ~ 17.9, wt &lt; 3.4375 &amp; hp &lt; 177.5 &amp; cyl &gt;= 7 &amp; wt &gt;= </span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;     3.16 &amp; disp &gt;= 107.6 ~ 15.2, drat &lt; 3.14 &amp; hp &gt;= 177.5 &amp; </span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;     cyl &gt;= 7 &amp; wt &gt;= 3.16 &amp; disp &gt;= 107.6 ~ 16.55, drat &gt;= 3.14 &amp; </span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 177.5 &amp; cyl &gt;= 7 &amp; wt &gt;= 3.16 &amp; disp &gt;= 107.6 ~ 15.05, </span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;     drat &lt; 2.92 &amp; wt &gt;= 3.4375 &amp; hp &lt; 177.5 &amp; cyl &gt;= 7 &amp; wt &gt;= </span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;         3.16 &amp; disp &gt;= 107.6 ~ 15.5, .default = 18.8) + case_when(hp &lt; </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;     79.5 ~ 29.8, disp &lt; 142.9 &amp; cyl &lt; 7 &amp; hp &gt;= 79.5 ~ 22.125, </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;     disp &gt;= 456 &amp; cyl &gt;= 7 &amp; hp &gt;= 79.5 ~ 10.4, hp &lt; 116.5 &amp; </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;         disp &gt;= 142.9 &amp; cyl &lt; 7 &amp; hp &gt;= 79.5 ~ 21.1333333333333, </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;     drat &gt;= 3.115 &amp; disp &lt; 456 &amp; cyl &gt;= 7 &amp; hp &gt;= 79.5 ~ 15.34, </span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;     qsec &lt; 18.6 &amp; hp &gt;= 116.5 &amp; disp &gt;= 142.9 &amp; cyl &lt; 7 &amp; hp &gt;= </span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;         79.5 ~ 19.5, qsec &gt;= 18.6 &amp; hp &gt;= 116.5 &amp; disp &gt;= 142.9 &amp; </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt;         cyl &lt; 7 &amp; hp &gt;= 79.5 ~ 17.8, drat &lt; 3.075 &amp; drat &lt; 3.115 &amp; </span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 456 &amp; cyl &gt;= 7 &amp; hp &gt;= 79.5 ~ 15.725, .default = 19.2) + </span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.3125 &amp; drat &lt; 3.75 ~ 22.05, wt &lt; 2.23 &amp; </span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;         drat &gt;= 3.75 ~ 29.6, drat &lt; 3.035 &amp; wt &gt;= 3.3125 &amp; drat &lt; </span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt;         3.75 ~ 10.4, gear &gt;= 4.5 &amp; wt &gt;= 2.23 &amp; drat &gt;= 3.75 ~ </span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt;         15.8, carb &lt; 2.5 &amp; drat &gt;= 3.035 &amp; wt &gt;= 3.3125 &amp; drat &lt; </span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">#&gt;         3.75 ~ 16.3666666666667, vs &lt; 0.5 &amp; gear &lt; 4.5 &amp; wt &gt;= </span></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a><span class="co">#&gt;         2.23 &amp; drat &gt;= 3.75 ~ 21, hp &gt;= 290 &amp; carb &gt;= 2.5 &amp; drat &gt;= </span></span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="co">#&gt;         3.035 &amp; wt &gt;= 3.3125 &amp; drat &lt; 3.75 ~ 15, qsec &lt; 0 &amp; vs &gt;= </span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co">#&gt;         0.5 &amp; gear &lt; 4.5 &amp; wt &gt;= 2.23 &amp; drat &gt;= 3.75 ~ 24.4, </span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt;         qsec &gt;= 0 &amp; vs &gt;= 0.5 &amp; gear &lt; 4.5 &amp; wt &gt;= 2.23 &amp; drat &gt;= </span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt;             3.75 ~ 22.8, disp &lt; 395 &amp; hp &lt; 290 &amp; carb &gt;= 2.5 &amp; </span></span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co">#&gt;             drat &gt;= 3.035 &amp; wt &gt;= 3.3125 &amp; drat &lt; 3.75 ~ 13.68, </span></span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;         .default = 14.7) + case_when(wt &gt;= 2.26 &amp; cyl &lt; 5 ~ 22.56, </span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;     qsec &lt; 16.8 &amp; wt &lt; 2.26 &amp; cyl &lt; 5 ~ 26, qsec &gt;= 16.8 &amp; wt &lt; </span></span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;         2.26 &amp; cyl &lt; 5 ~ 31.5, qsec &gt;= 19.83 &amp; disp &lt; 266.9 &amp; </span></span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;         cyl &gt;= 5 ~ 18.1, qsec &gt;= 17.71 &amp; disp &gt;= 266.9 &amp; cyl &gt;= </span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;         5 ~ 12.8, hp &lt; 116.5 &amp; qsec &lt; 19.83 &amp; disp &lt; 266.9 &amp; </span></span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;         cyl &gt;= 5 ~ 21.08, hp &gt;= 116.5 &amp; qsec &lt; 19.83 &amp; disp &lt; </span></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;         266.9 &amp; cyl &gt;= 5 ~ 19.2, drat &gt;= 3.19 &amp; qsec &lt; 17.71 &amp; </span></span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;         disp &gt;= 266.9 &amp; cyl &gt;= 5 ~ 15.25, drat &lt; 3.075 &amp; drat &lt; </span></span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;         3.19 &amp; qsec &lt; 17.71 &amp; disp &gt;= 266.9 &amp; cyl &gt;= 5 ~ 16.4, </span></span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt;     .default = 18.95) + case_when(hp &lt; 80.5 ~ 29.9, gear &gt;= 4.5 &amp; </span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt;     carb &lt; 2.5 &amp; hp &gt;= 80.5 ~ 30.4, hp &lt; 192.5 &amp; carb &gt;= 2.5 &amp; </span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 80.5 ~ 15.725, disp &lt; 182.9 &amp; gear &lt; 4.5 &amp; carb &lt; 2.5 &amp; </span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 80.5 ~ 21.7, hp &lt; 222.5 &amp; hp &gt;= 192.5 &amp; carb &gt;= 2.5 &amp; </span></span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 80.5 ~ 10.4, wt &lt; 3.3275 &amp; disp &gt;= 182.9 &amp; gear &lt; 4.5 &amp; </span></span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt;     carb &lt; 2.5 &amp; hp &gt;= 80.5 ~ 21.4, drat &lt; 3.88 &amp; hp &gt;= 222.5 &amp; </span></span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt;     hp &gt;= 192.5 &amp; carb &gt;= 2.5 &amp; hp &gt;= 80.5 ~ 14.925, drat &gt;= </span></span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt;     3.88 &amp; hp &gt;= 222.5 &amp; hp &gt;= 192.5 &amp; carb &gt;= 2.5 &amp; hp &gt;= 80.5 ~ </span></span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt;     15.8, cyl &lt; 7 &amp; wt &gt;= 3.3275 &amp; disp &gt;= 182.9 &amp; gear &lt; 4.5 &amp; </span></span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt;     carb &lt; 2.5 &amp; hp &gt;= 80.5 ~ 18.1, disp &lt; 380 &amp; cyl &gt;= 7 &amp; wt &gt;= </span></span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt;     3.3275 &amp; disp &gt;= 182.9 &amp; gear &lt; 4.5 &amp; carb &lt; 2.5 &amp; hp &gt;= </span></span>
+<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a><span class="co">#&gt;     80.5 ~ 18.7, .default = 19.2))/5L</span></span></code></pre></div>
 </div>
 
 

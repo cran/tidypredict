@@ -48,8 +48,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -60,7 +61,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -351,10 +352,13 @@ each term.</li>
 supported.</li>
 <li><code>offset</code> is supported</li>
 <li>Categorical variables are supported</li>
+<li>Interactions with <code>:</code> and <code>*</code> are
+supported</li>
 <li>In-line functions in the formulas are <strong>not
 supported</strong>:
 <ul>
 <li>OK - <code>wt ~ mpg + am</code></li>
+<li>OK - <code>wt ~ mpg * am + vs:disp</code></li>
 <li>OK - <code>mutate(mtcars, newam = paste0(am))</code> and then
 <code>wt ~ mpg + newam</code></li>
 <li>Not OK - <code>wt ~ mpg + as.factor(am)</code></li>

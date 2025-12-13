@@ -383,16 +383,16 @@ package</h1>
 <ul>
 <li><p>Create the R formula</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; 22.2918960405404 + (ifelse(parch &lt; 2, 2 - parch, 0) * 4.85356462114356) + </span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; 22.2918960405403 + (ifelse(parch &lt; 2, 2 - parch, 0) * 4.85356462114364) + </span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;     (ifelse(parch &gt; 2, parch - 2, 0) * 13.0493891423279) + (ifelse(parch &gt; </span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt;     4, parch - 4, 0) * -18.8998708031825) + (ifelse(sibsp &gt; 1, </span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt;     sibsp - 1, 0) * -7.71566779782014) + (ifelse(sibsp &gt; 1, sibsp - </span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(parch &lt; 1, 1 - parch, 0) * 7.40395975552271) + </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt;     4, parch - 4, 0) * -18.8998708031821) + (ifelse(sibsp &gt; 1, </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt;     sibsp - 1, 0) * -7.7156677978202) + (ifelse(sibsp &gt; 1, sibsp - </span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(parch &lt; 1, 1 - parch, 0) * 7.40395975552276) + </span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;     (ifelse(sibsp &gt; 1, sibsp - 1, 0) * ifelse(parch &gt; 1, parch - </span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;         1, 0) * 4.41874354843213)</span></span></code></pre></div></li>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;         1, 0) * 4.41874354843216)</span></span></code></pre></div></li>
 <li><p>SQL output example</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_odbc</span>())</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; (((((22.2918960405404 + (CASE WHEN (`parch` &lt; 2.0) THEN (2.0 - `parch`) WHEN NOT (`parch` &lt; 2.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * 4.85356462114356)) + (CASE WHEN (`parch` &gt; 2.0) THEN (`parch` - 2.0) WHEN NOT (`parch` &gt; 2.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * 13.0493891423279)) + (CASE WHEN (`parch` &gt; 4.0) THEN (`parch` - 4.0) WHEN NOT (`parch` &gt; 4.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * -18.8998708031825)) + (CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * -7.71566779782014)) + ((CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * CASE WHEN (`parch` &lt; 1.0) THEN (1.0 - `parch`) WHEN NOT (`parch` &lt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co">) * 7.40395975552271)) + ((CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * CASE WHEN (`parch` &gt; 1.0) THEN (`parch` - 1.0) WHEN NOT (`parch` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co">) * 4.41874354843213)</span></span></code></pre></div></li>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; (((((22.2918960405403 + (CASE WHEN (`parch` &lt; 2.0) THEN (2.0 - `parch`) WHEN NOT (`parch` &lt; 2.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * 4.85356462114364)) + (CASE WHEN (`parch` &gt; 2.0) THEN (`parch` - 2.0) WHEN NOT (`parch` &gt; 2.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * 13.0493891423279)) + (CASE WHEN (`parch` &gt; 4.0) THEN (`parch` - 4.0) WHEN NOT (`parch` &gt; 4.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * -18.8998708031821)) + (CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * -7.7156677978202)) + ((CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * CASE WHEN (`parch` &lt; 1.0) THEN (1.0 - `parch`) WHEN NOT (`parch` &lt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co">) * 7.40395975552276)) + ((CASE WHEN (`sibsp` &gt; 1.0) THEN (`sibsp` - 1.0) WHEN NOT (`sibsp` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co"> * CASE WHEN (`parch` &gt; 1.0) THEN (`parch` - 1.0) WHEN NOT (`parch` &gt; 1.0) THEN 0.0 </span><span class="re">END</span><span class="co">) * 4.41874354843216)</span></span></code></pre></div></li>
 <li><p>Add the prediction to the original table</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
@@ -427,15 +427,15 @@ well:</p>
 <span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>)</span>
 <span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
 <span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(2.91352600741338 + (ifelse(age &gt; 32, age - 32, </span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;     0) * -0.0375714917713112) + (ifelse(pclass == &quot;2nd&quot;, 1, 0) * </span></span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;     ifelse(sex == &quot;male&quot;, 1, 0) * -1.76809447811121) + (ifelse(pclass == </span></span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;     &quot;3rd&quot;, 1, 0) * -5.03005595780699) + (ifelse(pclass == &quot;3rd&quot;, </span></span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(sibsp &lt; 4, 4 - sibsp, 0) * 0.618652747659854) + </span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(2.91352600741337 + (ifelse(age &gt; 32, age - 32, </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;     0) * -0.0375714917713104) + (ifelse(pclass == &quot;2nd&quot;, 1, 0) * </span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;     ifelse(sex == &quot;male&quot;, 1, 0) * -1.7680944781112) + (ifelse(pclass == </span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;     &quot;3rd&quot;, 1, 0) * -5.03005595780695) + (ifelse(pclass == &quot;3rd&quot;, </span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(sibsp &lt; 4, 4 - sibsp, 0) * 0.618652747659846) + </span></span>
 <span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;     (ifelse(pclass == &quot;3rd&quot;, 1, 0) * ifelse(sex == &quot;male&quot;, 1, </span></span>
 <span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;         0) * 1.22269536265148) + (ifelse(sex == &quot;male&quot;, 1, 0) * </span></span>
-<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;     -3.18562450248533) + (ifelse(sex == &quot;male&quot;, 1, 0) * ifelse(age &lt; </span></span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;     16, 16 - age, 0) * 0.241814028713259)))</span></span></code></pre></div>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;     -3.18562450248532) + (ifelse(sex == &quot;male&quot;, 1, 0) * ifelse(age &lt; </span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;     16, 16 - age, 0) * 0.241814028713262)))</span></span></code></pre></div>
 <p>The spec sets the <code>is_glm</code> entry to 1, as well as the
 <code>family</code> and <code>link</code> entries.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">parse_model</span>(model), <span class="dv">2</span>)</span>
@@ -469,13 +469,13 @@ well:</p>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="fu">fit</span>(age <span class="sc">~</span> sibsp <span class="sc">+</span> parch, <span class="at">data =</span> etitanic)</span>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(p_model)</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 22.2918960405404 + (ifelse(parch &lt; 2, 2 - parch, 0) * 4.85356462114356) + </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 22.2918960405403 + (ifelse(parch &lt; 2, 2 - parch, 0) * 4.85356462114364) + </span></span>
 <span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;     (ifelse(parch &gt; 2, parch - 2, 0) * 13.0493891423279) + (ifelse(parch &gt; </span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;     4, parch - 4, 0) * -18.8998708031825) + (ifelse(sibsp &gt; 1, </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;     sibsp - 1, 0) * -7.71566779782014) + (ifelse(sibsp &gt; 1, sibsp - </span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(parch &lt; 1, 1 - parch, 0) * 7.40395975552271) + </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;     4, parch - 4, 0) * -18.8998708031821) + (ifelse(sibsp &gt; 1, </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;     sibsp - 1, 0) * -7.7156677978202) + (ifelse(sibsp &gt; 1, sibsp - </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(parch &lt; 1, 1 - parch, 0) * 7.40395975552276) + </span></span>
 <span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;     (ifelse(sibsp &gt; 1, sibsp - 1, 0) * ifelse(parch &gt; 1, parch - </span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;         1, 0) * 4.41874354843213)</span></span></code></pre></div>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;         1, 0) * 4.41874354843216)</span></span></code></pre></div>
 </div>
 <div id="parse-model-spec" class="section level2">
 <h2>Parse model spec</h2>

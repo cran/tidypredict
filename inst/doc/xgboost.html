@@ -518,16 +518,16 @@ issue</a> for more information.</p>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>p_model <span class="ot">&lt;-</span> <span class="fu">boost_tree</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;xgboost&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">fit</span>(am <span class="sc">~</span> ., <span class="at">data =</span> mtcars)</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Warning in check.deprecation(deprecated_train_params, match.call(), ...):</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Passed invalid function arguments: nthread. These should be passed as a list to</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; argument &#39;params&#39;. Conversion from argument to &#39;params&#39; entry will be done</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; automatically, but this behavior will become an error in a future version.</span></span></code></pre></div>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">fit</span>(am <span class="sc">~</span> ., <span class="at">data =</span> mtcars)</span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(p_model, mtcars, <span class="at">xg_df =</span> xgb_bin_data)</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
 <span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; Fitted records above the threshold: 12</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; Fit max  difference:</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; Lower max difference:</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; Upper max difference:1.04374733855828e-07</span></span></code></pre></div>
 </div>
 <div id="parse-model-spec" class="section level2">
 <h2>Parse model spec</h2>

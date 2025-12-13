@@ -385,7 +385,7 @@ equation is applied. This means that the target SQL database type will
 need to support the exponent function.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_mssql</span>())</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 1.0 - 1.0 / (1.0 + EXP(((20.8527831345691 + (`wt` * -7.85934263583835)) + (IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 3.10462643177452)) + (IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 5.37942092366097)))</span></span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 1.0 - 1.0 / (1.0 + EXP(((20.8527831345691 + (`wt` * -7.85934263583836)) + (IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 3.10462643177453)) + (IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 5.37942092366097)))</span></span></code></pre></div>
 <p>Alternatively, use <code>tidypredict_to_column()</code> if the
 results are the be used or previewed in <code>dplyr</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
@@ -433,8 +433,8 @@ exist.</p>
 <code>dplyr</code>, a.k.a Tidy Eval, formula. All categorical variables
 are operated using <code>if_else()</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(20.8527831345691 + (wt * -7.85934263583835) + </span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;     (ifelse(char_cyl == &quot;cyl6&quot;, 1, 0) * 3.10462643177452) + (ifelse(char_cyl == </span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(20.8527831345691 + (wt * -7.85934263583836) + </span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;     (ifelse(char_cyl == &quot;cyl6&quot;, 1, 0) * 3.10462643177453) + (ifelse(char_cyl == </span></span>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;     &quot;cyl8&quot;, 1, 0) * 5.37942092366097)))</span></span></code></pre></div>
 <p>From there, the Tidy Eval formula can be used anywhere where it can
 be operated. <code>tidypredict</code> provides three paths:</p>

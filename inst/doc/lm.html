@@ -407,7 +407,7 @@ results are the be used or previewed in <code>dplyr</code>.</p>
 operates the prediction interval. The <code>interval</code> defaults to
 0.95</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">tidypredict_sql_interval</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_mssql</span>())</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 2.04840714179524 * SQRT(((((((-0.176776695296637) * (-0.176776695296637)) * 6.63799055122669) + ((-0.590557271637747 + `wt` * 0.183559646169165) * (-0.590557271637747 + `wt` * 0.183559646169165)) * 6.63799055122669) + (((-0.126215672528828 + `wt` * 0.0101118696567173) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.428266330860589) * ((-0.126215672528828 + `wt` * 0.0101118696567173) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.428266330860589)) * 6.63799055122669) + ((((0.386215468111418 + `wt` * -0.230516217152035) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.332336511639638) + IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 0.646203930513815) * (((0.386215468111418 + `wt` * -0.230516217152035) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.332336511639638) + IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 0.646203930513815)) * 6.63799055122669) + 6.63799055122669)</span></span></code></pre></div>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 2.04840714179524 * SQRT(((((((-0.176776695296637) * (-0.176776695296637)) * 6.63799055122669) + ((-0.590557271637747 + `wt` * 0.183559646169165) * (-0.590557271637747 + `wt` * 0.183559646169165)) * 6.63799055122669) + (((-0.126215672528828 + `wt` * 0.0101118696567173) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.428266330860589) * ((-0.126215672528828 + `wt` * 0.0101118696567173) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.428266330860589)) * 6.63799055122669) + ((((0.386215468111418 + `wt` * -0.230516217152034) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.332336511639638) + IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 0.646203930513815) * (((0.386215468111418 + `wt` * -0.230516217152034) + IIF(`char_cyl` = &#39;cyl6&#39;, 1.0, 0.0) * 0.332336511639638) + IIF(`char_cyl` = &#39;cyl8&#39;, 1.0, 0.0) * 0.646203930513815)) * 6.63799055122669) + 6.63799055122669)</span></span></code></pre></div>
 <p>Prediction intervals also works in the
 <code>tidypredict_to_column()</code>, just set the
 <code>add_interval</code> argument to <code>TRUE</code>.</p>
@@ -472,9 +472,9 @@ supported</p>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;         &quot;cyl6&quot;, 1, 0) * 0.428266330860589) * (-0.126215672528828 + </span></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt;         wt * 0.0101118696567173 + ifelse(char_cyl == &quot;cyl6&quot;, </span></span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt;         1, 0) * 0.428266330860589) * 6.63799055122669 + (0.386215468111418 + </span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;     wt * -0.230516217152035 + ifelse(char_cyl == &quot;cyl6&quot;, 1, 0) * </span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;     wt * -0.230516217152034 + ifelse(char_cyl == &quot;cyl6&quot;, 1, 0) * </span></span>
 <span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;     0.332336511639638 + ifelse(char_cyl == &quot;cyl8&quot;, 1, 0) * 0.646203930513815) * </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;     (0.386215468111418 + wt * -0.230516217152035 + ifelse(char_cyl == </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;     (0.386215468111418 + wt * -0.230516217152034 + ifelse(char_cyl == </span></span>
 <span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;         &quot;cyl6&quot;, 1, 0) * 0.332336511639638 + ifelse(char_cyl == </span></span>
 <span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;         &quot;cyl8&quot;, 1, 0) * 0.646203930513815) * 6.63799055122669 + </span></span>
 <span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;     6.63799055122669)</span></span></code></pre></div>
@@ -521,7 +521,7 @@ objects fitted via the <code>parsnip</code> package.</p>
 <span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl, <span class="at">offset =</span> am, <span class="at">data =</span> mtcars)</span>
 <span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)</span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 39.686261480253 + (wt * -3.19097213898374) + (cyl * -1.5077949682598)</span></span></code></pre></div>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 39.6862614802529 + (wt * -3.19097213898374) + (cyl * -1.5077949682598)</span></span></code></pre></div>
 </div>
 
 

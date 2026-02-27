@@ -203,33 +203,12 @@ path_formulas <- function(path) {
 #'   Can be character or numeric.
 #'  @keywords internal
 path_formula <- function(x) {
-  if (x$type == "conditional") {
-    if (x$op == "more") {
-      i <- expr(!!as.name(x$col) > !!x$val)
-    } else if (x$op == "more-equal") {
-      i <- expr(!!as.name(x$col) >= !!x$val)
-    } else if (x$op == "less") {
-      i <- expr(!!as.name(x$col) < !!x$val)
-    } else if (x$op == "less-equal") {
-      i <- expr(!!as.name(x$col) <= !!x$val)
-    } else {
-      cli::cli_abort(
-        "{.field op} has unsupported value of {.value {x$op}}.",
-        .internal = TRUE
-      )
-    }
-  } else if (x$type == "set") {
-    sets <- reduce(x$vals, c)
-    if (x$op == "in") {
-      i <- expr(!!as.name(x$col) %in% !!sets)
-    } else if (x$op == "not-in") {
-      i <- expr((!!as.name(x$col) %in% !!sets) == FALSE)
-    } else {
-      cli::cli_abort(
-        "{.field op} has unsupported value of {.value {x$op}}.",
-        .internal = TRUE
-      )
-    }
+  type <- x$type
+
+  if (type == "conditional") {
+    i <- build_comparison_expr(x$col, x$val, x$op)
+  } else if (type == "set") {
+    i <- build_set_expr(x$col, x$vals, x$op)
   } else {
     cli::cli_abort(
       "{.field type} has unsupported value of {.value {x$type}}.",
@@ -237,4 +216,72 @@ path_formula <- function(x) {
     )
   }
   i
+}
+
+# Build a comparison expression (col <op> val)
+build_comparison_expr <- function(col, val, op) {
+  col <- as.name(col)
+  if (op == "more") {
+    expr(!!col > !!val)
+  } else if (op == "more-equal") {
+    expr(!!col >= !!val)
+  } else if (op == "less") {
+    expr(!!col < !!val)
+  } else if (op == "less-equal") {
+    expr(!!col <= !!val)
+  } else {
+    cli::cli_abort(
+      "{.field op} has unsupported value of {.value {op}}.",
+      .internal = TRUE
+    )
+  }
+}
+
+# Build a set membership expression (col %in% vals or not)
+build_set_expr <- function(col, vals, op) {
+  col <- as.name(col)
+  sets <- reduce(vals, c)
+  if (op == "in") {
+    expr(!!col %in% !!sets)
+  } else if (op == "not-in") {
+    expr((!!col %in% !!sets) == FALSE)
+  } else {
+    cli::cli_abort(
+      "{.field op} has unsupported value of {.value {op}}.",
+      .internal = TRUE
+    )
+  }
+}
+
+# For {orbital}
+#' Build case_when expression from nodes with predictions and paths
+#'
+#' Shared helper for building tree expressions used by ranger and randomForest
+#' classification extractors.
+#'
+#' @param nodes A list of lists, each with `prediction` (numeric) and `path`
+#' @keywords internal
+#' @export
+.build_case_when_tree <- function(nodes) {
+  node_exprs <- map(nodes, function(node) {
+    rcl <- path_formulas(node$path)
+    if (isTRUE(rcl)) {
+      return(node$prediction)
+    }
+    expr(!!rcl ~ !!node$prediction)
+  })
+
+  # Handle stump trees (single node with no conditions)
+  if (length(node_exprs) == 1 && is.numeric(node_exprs[[1]])) {
+    return(node_exprs[[1]])
+  }
+
+  default <- node_exprs[[length(node_exprs)]]
+  if (rlang::is_formula(default)) {
+    default <- rlang::f_rhs(default)
+  }
+  node_exprs[[length(node_exprs)]] <- NULL
+  node_exprs <- c(node_exprs, .default = default)
+
+  expr(case_when(!!!node_exprs))
 }

@@ -484,6 +484,16 @@ in Cubist.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">str</span>(pm<span class="sc">$</span>terms[<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>])</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt;  NULL</span></span></code></pre></div>
 </div>
+<div id="limitations" class="section level2">
+<h2>Limitations</h2>
+<ul>
+<li><code>tidypredict_test()</code> is not supported</li>
+<li>Prediction intervals are not supported</li>
+<li>Cubist uses 32-bit floats internally, which may cause prediction
+discrepancies at exact split boundaries. See the <a href="float-precision.html">float precision</a> article for
+details.</li>
+</ul>
+</div>
 
 
 

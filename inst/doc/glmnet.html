@@ -381,7 +381,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <ul>
 <li><p>Create the R formula</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; 35.3137765116027 + (cyl * -0.871451193824228) + (hp * -0.0101173960249783) + </span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; 35.3137765116027 + (cyl * -0.871451193824227) + (hp * -0.0101173960249783) + </span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;     (wt * -2.59443677687505)</span></span></code></pre></div></li>
 <li><p>Add the prediction to the original table</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
@@ -422,8 +422,8 @@ model’s <code>predict()</code> results.</p>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;glmnet&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> ., <span class="at">data =</span> mtcars)</span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(p_model)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; 35.3140536966127 + (cyl * -0.871623418095165) + (hp * -0.0101157918502673) + </span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt;     (wt * -2.59426484734253)</span></span></code></pre></div>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; 35.3140536966127 + (cyl * -0.871623418095163) + (hp * -0.0101157918502673) + </span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt;     (wt * -2.59426484734254)</span></span></code></pre></div>
 </div>
 <div id="parse-model-spec" class="section level2">
 <h2>Parse model spec</h2>

@@ -3,6 +3,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+source("_threads.R")
 library(tidypredict)
 library(earth)
 library(dplyr)

@@ -6,6 +6,7 @@ if (!rlang::is_installed("randomForest")) {
 }
 
 ## ----setup, include=FALSE-----------------------------------------------------
+source("_threads.R")
 library(dplyr)
 library(tidypredict)
 library(randomForest)

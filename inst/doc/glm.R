@@ -4,6 +4,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
+source("_threads.R")
 library(dplyr)
 library(tidypredict)
 

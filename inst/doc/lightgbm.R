@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   eval = eval_code
 )
+source("_threads.R")
 
 ## -----------------------------------------------------------------------------
 library(lightgbm)

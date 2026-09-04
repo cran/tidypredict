@@ -1,7 +1,11 @@
 # Helper to create test model
-# Uses mtcars[, -9] (all columns except 'am') to avoid boundary issues
-# This matches the original test setup and avoids floating point precision
-# issues at exact split boundaries
+#
+# Uses mtcars[, -9], every column except `am`, because `am` is the label.
+#
+# This does not avoid split boundaries: xgboost picks 3.19 as a `wt` threshold
+# here, which is exactly an observed value, and comparing it in doubles rather
+# than 32-bit floats used to route two rows down the wrong branch. See the
+# f32 tests below.
 make_xgb_model <- function(
   max_depth = 2L,
   nrounds = 4L,
@@ -241,6 +245,135 @@ test_that("reg:squarederror predictions match native predict", {
 
   expect_s3_class(result, "tidypredict_test")
   expect_false(result$alert)
+})
+
+test_that("a saved and reloaded booster still predicts correctly (#292)", {
+  skip_if_not_installed("xgboost")
+
+  # `xgb.load()` sets neither `attr(model, "param")` nor `model$params`, so a
+  # reloaded booster used to take the pre-2.0 code path and fail outright, and
+  # once past that had no objective to apply, returning the raw margin as
+  # though it were a probability.
+  X <- as.matrix(mtcars[, c("wt", "disp", "hp")])
+
+  for (objective in c("reg:squarederror", "binary:logistic", "count:poisson")) {
+    label <- switch(
+      objective,
+      "binary:logistic" = mtcars$am,
+      "count:poisson" = mtcars$carb,
+      mtcars$mpg
+    )
+
+    set.seed(1)
+    model <- xgboost::xgb.train(
+      params = list(max_depth = 3L, objective = objective),
+      data = xgboost::xgb.DMatrix(X, label = label),
+      nrounds = 5L,
+      verbose = 0
+    )
+
+    path <- withr::local_tempfile(fileext = ".ubj")
+    xgboost::xgb.save(model, path)
+    reloaded <- xgboost::xgb.load(path)
+
+    # The objective has to survive the round trip, or a logit is returned as a
+    # probability without anything to signal it.
+    expect_equal(
+      parse_model(reloaded)$general$params$objective,
+      objective
+    )
+
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(reloaded), mtcars),
+      rlang::eval_tidy(tidypredict_fit(model), mtcars),
+      info = objective
+    )
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(reloaded), mtcars),
+      as.numeric(predict(reloaded, X)),
+      tolerance = 1e-5,
+      info = objective
+    )
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(parse_model(reloaded)), mtcars),
+      as.numeric(predict(reloaded, X)),
+      tolerance = 1e-5,
+      info = objective
+    )
+  }
+})
+
+test_that("values sitting on a split boundary match native predict", {
+  skip_if_not_installed("xgboost")
+
+  # Every threshold in the generated formula, probed from both sides and from
+  # exactly on it. The last of those is the one worth having: the boundary is
+  # the midpoint between two floats, so a value can land precisely on it, and
+  # which side it belongs to is decided by how xgboost rounds the tie.
+  #
+  # Not `mtcars`: none of the thresholds xgboost picks there resolve the tie
+  # towards the neighbouring float, so the model agrees either way and the probe
+  # proves nothing.
+  set.seed(42)
+  n <- 200
+  df <- data.frame(
+    x1 = round(rnorm(n), 3),
+    x2 = round(runif(n, 0, 10), 3),
+    x3 = round(rnorm(n, 5, 2), 3),
+    x4 = round(runif(n, -3, 3), 3)
+  )
+  df$y <- 2 * df$x1 - 0.5 * df$x2 + sin(df$x3) + rnorm(n, sd = 0.3)
+  cols <- c("x1", "x2", "x3", "x4")
+
+  model <- xgboost::xgb.train(
+    params = list(
+      max_depth = 3L,
+      objective = "reg:squarederror",
+      base_score = 0.5
+    ),
+    data = xgboost::xgb.DMatrix(as.matrix(df[, cols]), label = df$y),
+    nrounds = 5L,
+    verbose = 0
+  )
+  fit <- tidypredict_fit(model)
+
+  thresholds <- list()
+  collect <- function(e) {
+    if (!is.call(e)) {
+      return()
+    }
+    if (identical(as.character(e[[1]])[1], "<") && is.numeric(e[[3]])) {
+      thresholds[[length(thresholds) + 1L]] <<- list(
+        col = as.character(e[[2]]),
+        val = e[[3]]
+      )
+    }
+    for (i in seq_along(e)) {
+      collect(e[[i]])
+    }
+  }
+  collect(fit)
+  expect_gt(length(thresholds), 0)
+
+  probes <- lapply(thresholds, function(th) {
+    row <- df[rep(1, 3), cols, drop = FALSE]
+    for (col in cols) {
+      row[[col]] <- median(df[[col]])
+    }
+    row[[th$col]] <- c(
+      th$val,
+      next_double(th$val, -1),
+      next_double(th$val, 1)
+    )
+    row
+  })
+  probe <- do.call(rbind, probes)
+
+  expect_equal(
+    rlang::eval_tidy(fit, probe),
+    as.numeric(predict(model, as.matrix(probe[, cols]))),
+    tolerance = 1e-6
+  )
 })
 
 test_that("binary:logistic predictions match native predict", {
@@ -1074,24 +1207,36 @@ test_that("tidypredict_test respects max_rows parameter", {
   expect_equal(nrow(result$raw_results), 10)
 })
 
-test_that(".extract_xgb_trees returns list of expressions", {
+test_that("tidypredict_trees returns an unnamed list of expressions", {
   skip_if_not_installed("xgboost")
   model <- make_xgb_model(nrounds = 4L)
 
-  trees <- .extract_xgb_trees(model)
+  trees <- tidypredict_trees(model)
 
   expect_type(trees, "list")
   expect_length(trees, 4)
+  expect_null(names(trees))
   for (tree in trees) {
     expect_type(tree, "language")
   }
 })
 
-test_that(".extract_xgb_trees combined results match tidypredict_fit", {
+test_that("tidypredict_n_trees counts every tree", {
+  skip_if_not_installed("xgboost")
+  model <- make_xgb_model(nrounds = 4L)
+
+  expect_identical(tidypredict_n_trees(model), 4L)
+  expect_identical(
+    tidypredict_n_trees(model),
+    length(tidypredict_trees(model))
+  )
+})
+
+test_that("tidypredict_trees combined results match tidypredict_fit", {
   skip_if_not_installed("xgboost")
   model <- make_xgb_model(nrounds = 4L, objective = "reg:squarederror")
 
-  trees <- .extract_xgb_trees(model)
+  trees <- tidypredict_trees(model)
   eval_env <- rlang::new_environment(
     data = as.list(mtcars),
     parent = asNamespace("dplyr")
@@ -1106,11 +1251,11 @@ test_that(".extract_xgb_trees combined results match tidypredict_fit", {
   expect_equal(combined, fit_result)
 })
 
-test_that(".extract_xgb_trees errors on non-xgb.Booster", {
-  expect_snapshot(.extract_xgb_trees(list()), error = TRUE)
+test_that("tidypredict_trees errors on non-xgb.Booster", {
+  expect_snapshot(tidypredict_trees(list()), error = TRUE)
 })
 
-test_that(".extract_xgb_trees combined results match tidypredict_fit for DART", {
+test_that("tidypredict_trees combined results match tidypredict_fit for DART", {
   skip_if_not_installed("xgboost")
 
   # Add 0.1 to avoid exact split boundaries (float32 vs float64 precision)
@@ -1138,7 +1283,7 @@ test_that(".extract_xgb_trees combined results match tidypredict_fit for DART", 
     verbose = 0
   )
 
-  trees <- .extract_xgb_trees(model)
+  trees <- tidypredict_trees(model)
   eval_env <- rlang::new_environment(
     data = as.list(mtcars_adj),
     parent = asNamespace("dplyr")
@@ -1383,7 +1528,7 @@ test_that("v1 parsed model with missing=TRUE on less op", {
 
 # YAML serialization tests ---------------------------------------------------
 
-test_that("parsed model can be saved and loaded via YAML", {
+test_that("model can be saved and re-loaded", {
   skip_if_not_installed("xgboost")
   skip_if_not_installed("yaml")
 
@@ -1416,6 +1561,52 @@ test_that("loaded model produces same predictions", {
   loaded_preds <- rlang::eval_tidy(tidypredict_fit(pm_loaded), mtcars)
 
   expect_equal(loaded_preds, original_preds, tolerance = 1e-5)
+})
+
+test_that("parsed model produces same predictions as the fitted model", {
+  skip_if_not_installed("xgboost")
+
+  model <- make_xgb_model()
+  pm <- as_parsed_model(parse_model(model))
+
+  direct <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+  parsed <- rlang::eval_tidy(tidypredict_fit(pm), mtcars)
+
+  expect_equal(parsed, direct)
+})
+
+test_that("parsed model predictions match native predict", {
+  skip_if_not_installed("xgboost")
+
+  xgb_data <- make_xgb_data()
+  model <- make_xgb_model()
+  pm <- as_parsed_model(parse_model(model))
+
+  parsed <- rlang::eval_tidy(tidypredict_fit(pm), mtcars)
+
+  expect_equal(parsed, predict(model, xgb_data), tolerance = 1e-6)
+})
+
+test_that("tidypredict_fit predictions match native predict", {
+  skip_if_not_installed("xgboost")
+
+  xgb_data <- make_xgb_data()
+  model <- make_xgb_model()
+
+  direct <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+
+  expect_equal(direct, predict(model, xgb_data), tolerance = 1e-6)
+})
+
+test_that("tidypredict_test flags differences in both directions", {
+  skip_if_not_installed("xgboost")
+
+  xgb_data <- make_xgb_data()
+  model <- make_xgb_model()
+
+  result <- tidypredict_test(model, mtcars, xg_df = xgb_data, threshold = 1e-7)
+
+  expect_threshold_consistent(result, 1e-7)
 })
 
 # Parsnip integration tests --------------------------------------------------
@@ -1543,4 +1734,150 @@ test_that("tidypredict_test works with parsnip xgboost model", {
   preds <- rlang::eval_tidy(fit_formula, train_data)
   expect_type(preds, "double")
   expect_length(preds, nrow(train_data))
+})
+
+# Booster arguments that change predict() ------------------------------------
+
+xgb_option_data <- function() {
+  as.matrix(mtcars[, c("wt", "hp", "disp")])
+}
+
+expect_xgb_option_matches <- function(params, nrounds = 5) {
+  x <- xgb_option_data()
+  set.seed(1)
+  model <- xgboost::xgb.train(
+    params = params,
+    data = xgboost::xgb.DMatrix(x, label = mtcars$mpg),
+    nrounds = nrounds,
+    verbose = 0
+  )
+  testthat::expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), as.data.frame(x)),
+    as.numeric(predict(model, x)),
+    tolerance = 1e-5
+  )
+}
+
+test_that("num_parallel_tree predictions match native predict", {
+  skip_if_not_installed("xgboost")
+
+  expect_xgb_option_matches(list(
+    objective = "reg:squarederror",
+    num_parallel_tree = 3
+  ))
+})
+
+test_that("objective hyperparameters match native predict", {
+  skip_if_not_installed("xgboost")
+
+  expect_xgb_option_matches(list(
+    objective = "reg:tweedie",
+    tweedie_variance_power = 1.9
+  ))
+  expect_xgb_option_matches(list(
+    objective = "reg:pseudohubererror",
+    huber_slope = 10,
+    min_child_weight = 0
+  ))
+  expect_xgb_option_matches(list(
+    objective = "count:poisson",
+    max_delta_step = 0.1
+  ))
+  expect_xgb_option_matches(list(objective = "count:poisson", base_score = 3))
+})
+
+test_that("lossguide growth predictions match native predict", {
+  skip_if_not_installed("xgboost")
+
+  expect_xgb_option_matches(list(
+    objective = "reg:squarederror",
+    tree_method = "hist",
+    grow_policy = "lossguide",
+    max_depth = 0,
+    max_leaves = 4
+  ))
+})
+
+test_that("degenerate boosters match native predict", {
+  skip_if_not_installed("xgboost")
+
+  x <- as.matrix(mtcars[, "wt", drop = FALSE])
+  set.seed(1)
+  one_col <- xgboost::xgb.train(
+    params = list(objective = "reg:squarederror"),
+    data = xgboost::xgb.DMatrix(x, label = mtcars$mpg),
+    nrounds = 5,
+    verbose = 0
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(one_col), as.data.frame(x)),
+    as.numeric(predict(one_col, x)),
+    tolerance = 1e-5
+  )
+
+  full <- xgb_option_data()
+  set.seed(1)
+  shallow <- xgboost::xgb.train(
+    params = list(objective = "reg:squarederror", max_depth = 1),
+    data = xgboost::xgb.DMatrix(full, label = mtcars$mpg),
+    nrounds = 5,
+    verbose = 0
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(shallow), as.data.frame(full)),
+    as.numeric(predict(shallow, full)),
+    tolerance = 1e-5
+  )
+})
+
+test_that("a booster of stumps matches native predict", {
+  skip_if_not_installed("xgboost")
+
+  full <- xgb_option_data()
+  set.seed(1)
+  constant <- xgboost::xgb.train(
+    params = list(objective = "reg:squarederror"),
+    data = xgboost::xgb.DMatrix(full, label = rep(5, nrow(full))),
+    nrounds = 5,
+    verbose = 0
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(constant), as.data.frame(full)),
+    as.numeric(predict(constant, full)),
+    tolerance = 1e-5
+  )
+
+  set.seed(1)
+  one_row <- xgboost::xgb.train(
+    params = list(objective = "reg:squarederror"),
+    data = xgboost::xgb.DMatrix(full[1, , drop = FALSE], label = mtcars$mpg[1]),
+    nrounds = 3,
+    verbose = 0
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(one_row), as.data.frame(full)),
+    as.numeric(predict(one_row, full)),
+    tolerance = 1e-5
+  )
+})
+
+test_that("a booster trained on data containing NA matches native predict", {
+  skip_if_not_installed("xgboost")
+
+  x <- xgb_option_data()
+  x[1:3, "wt"] <- NA
+
+  set.seed(1)
+  model <- xgboost::xgb.train(
+    params = list(objective = "reg:squarederror"),
+    data = xgboost::xgb.DMatrix(x, label = mtcars$mpg),
+    nrounds = 5,
+    verbose = 0
+  )
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), as.data.frame(x)),
+    as.numeric(predict(model, x)),
+    tolerance = 1e-5
+  )
 })

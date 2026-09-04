@@ -27,7 +27,7 @@
 #'   Tree models still use flat `case_when()`.
 #'
 #' - **Version 3**: Current format. Tree models (rpart, ranger, randomForest,
-#'   xgboost, lightgbm, catboost, partykit, cubist) use nested `case_when()`
+#'   xgboost, lightgbm, catboost, partykit) use nested `case_when()`
 #'   expressions that mirror the tree structure. This produces more efficient
 #'   SQL and R code because conditions are evaluated hierarchically rather than
 #'   checking all leaf paths.
@@ -46,6 +46,13 @@
 #' - `pm_xgb`: XGBoost gradient boosting models
 #' - `pm_lgb`: LightGBM gradient boosting models
 #' - `pm_catboost`: CatBoost gradient boosting models
+#' - `pm_bart`: BART models
+#' - `pm_naive_bayes`: Naive Bayes models
+#' - `pm_nnet`: Neural network models
+#' - `pm_multiclass_regression`: Multiclass regression models
+#' - `pm_nullmodel_classification`: Null model classification
+#'
+#' This list is not exhaustive; new model types are added as support grows.
 #'
 #' @examples
 #' library(dplyr)
@@ -55,4 +62,12 @@
 #' @export
 parse_model <- function(model) {
   UseMethod("parse_model")
+}
+
+# Without this, an unsupported model gets R's "no applicable method" error,
+# which names an internal generic rather than saying the model is not
+# supported (#313).
+#' @export
+parse_model.default <- function(model) {
+  abort_model_unsupported(model)
 }

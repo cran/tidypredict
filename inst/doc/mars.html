@@ -408,8 +408,8 @@ package</h1>
 <span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; $ sibsp    &lt;int&gt; 0, 1, 1, 1, 1, 0, 1, 0, 2, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1…</span></span>
 <span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt; $ parch    &lt;int&gt; 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1…</span></span>
 <span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; $ fit      &lt;dbl&gt; 31.99903, 22.29190, 22.29190, 22.29190, 22.29190, 31.99903, 3…</span></span></code></pre></div></li>
-<li><p>Confirm that <code>tidypredict</code> results match to the
-model’s <code>predict()</code> results</p>
+<li><p>Confirm that <code>tidypredict</code> results match the model’s
+<code>predict()</code> results</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model, etitanic)</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
@@ -427,15 +427,15 @@ well:</p>
 <span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>)</span>
 <span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a></span>
 <span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(2.91352600741338 + (ifelse(age &gt; 32, age - 32, </span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;     0) * -0.0375714917713112) + (ifelse(pclass == &quot;2nd&quot;, 1, 0) * </span></span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;     ifelse(sex == &quot;male&quot;, 1, 0) * -1.76809447811121) + (ifelse(pclass == </span></span>
-<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;     &quot;3rd&quot;, 1, 0) * -5.03005595780699) + (ifelse(pclass == &quot;3rd&quot;, </span></span>
-<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;     1, 0) * ifelse(sibsp &lt; 4, 4 - sibsp, 0) * 0.618652747659854) + </span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; 1/(1 + exp(-(2.91352600741338 + (ifelse(age &gt; 32, age - 32, 0) * </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;     -0.0375714917713112) + (ifelse(pclass == &quot;2nd&quot;, 1, 0) * ifelse(sex == </span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;     &quot;male&quot;, 1, 0) * -1.76809447811121) + (ifelse(pclass == &quot;3rd&quot;, </span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;     1, 0) * -5.03005595780699) + (ifelse(pclass == &quot;3rd&quot;, 1, </span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;     0) * ifelse(sibsp &lt; 4, 4 - sibsp, 0) * 0.618652747659854) + </span></span>
 <span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;     (ifelse(pclass == &quot;3rd&quot;, 1, 0) * ifelse(sex == &quot;male&quot;, 1, </span></span>
 <span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;         0) * 1.22269536265148) + (ifelse(sex == &quot;male&quot;, 1, 0) * </span></span>
 <span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;     -3.18562450248533) + (ifelse(sex == &quot;male&quot;, 1, 0) * ifelse(age &lt; </span></span>
-<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;     16, 16 - age, 0) * 0.241814028713259)))</span></span></code></pre></div>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;     16, 16 - age, 0) * 0.241814028713259))))</span></span></code></pre></div>
 <p>The spec sets the <code>is_glm</code> entry to 1, as well as the
 <code>family</code> and <code>link</code> entries.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">str</span>(<span class="fu">parse_model</span>(model), <span class="dv">2</span>)</span>

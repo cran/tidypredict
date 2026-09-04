@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>bagger models</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">bagger models</h1>
+
+
+
+<table>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Works</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>tidypredict_fit()</code>, <code>tidypredict_sql()</code>,
+<code>parse_model()</code></td>
+<td>✔</td>
+</tr>
+<tr class="even">
+<td><code>tidypredict_to_column()</code></td>
+<td>✔</td>
+</tr>
+<tr class="odd">
+<td><code>tidypredict_test()</code></td>
+<td>✔</td>
+</tr>
+<tr class="even">
+<td><code>tidypredict_interval()</code>,
+<code>tidypredict_sql_interval()</code></td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td><code>parsnip</code></td>
+<td>✔</td>
+</tr>
+</tbody>
+</table>
+<p><code>baguette::bagger()</code> fits an ensemble of models on
+bootstrap samples of the training data. The <code>&quot;CART&quot;</code> base
+model, which fits <code>rpart::rpart()</code> trees, and the
+<code>&quot;C5.0&quot;</code> base model, which fits <code>C50::C5.0()</code>
+trees, are supported. <code>tidypredict_fit()</code> returns one nested
+<code>case_when()</code> per tree, so the size of the returned
+expression grows with <code>times</code>.</p>
+<p>For regression models the fitted value is the mean of the individual
+tree predictions. For classification models the class probabilities of
+each tree are averaged, and the returned expression is the class with
+the largest average probability.</p>
+<div id="tidypredict_-functions" class="section level2">
+<h2><code>tidypredict_</code> functions</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">100</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> baguette<span class="sc">::</span><span class="fu">bagger</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl <span class="sc">+</span> disp, <span class="at">data =</span> mtcars, <span class="at">times =</span> <span class="dv">5</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="co">#&gt; Registered S3 method overwritten by &#39;butcher&#39;:</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt;   method                 from    </span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt;   as.character.dev_topic generics</span></span></code></pre></div>
+<ul>
+<li><p>Create the R formula</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; (case_when(case_when(!is.na(wt) ~ wt &lt; 2.975, !is.na(disp) ~ </span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 163.8, !is.na(cyl) ~ cyl &lt; 7, .default = FALSE) ~ </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt;     23.0583333333333, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 3.545, !is.na(disp) ~ disp &lt; 380, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;     7, .default = FALSE) ~ 16.9125, .default = 15.125)) + case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 3.16, !is.na(disp) ~ disp &lt; 163.8, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;     7, .default = FALSE) ~ 24.3642857142857, .default = 15.7444444444444) + </span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.26, !is.na(disp) ~ </span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 101.55, !is.na(cyl) ~ cyl &lt; 5, .default = FALSE) ~ </span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;         30.0857142857143, .default = case_when(case_when(!is.na(cyl) ~ </span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt;         cyl &lt; 7, !is.na(disp) ~ disp &lt; 250.4, !is.na(wt) ~ wt &lt; </span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;         3.3125, .default = TRUE) ~ 20.4428571428571, .default = 14.6454545454545)) + </span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(disp) ~ disp &lt; 163.8, !is.na(wt) ~ </span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.3125, !is.na(cyl) ~ cyl &lt; 5, .default = FALSE) ~ </span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt;         25.6733333333333, .default = 14.6764705882353) + case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.41, !is.na(disp) ~ disp &lt; 120.65, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;     5, .default = FALSE) ~ 29.8, .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 266.9, !is.na(cyl) ~ cyl &lt; 7, !is.na(wt) ~ wt &lt; 3.325, </span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt;     .default = FALSE) ~ 21.325, !is.na(disp) | !is.na(cyl) | </span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt;     !is.na(wt) ~ 14.6916666666667, .default = 18.0083333333333)))/5L</span></span></code></pre></div></li>
+<li><p>Add the predictions to the original table</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>mtcars <span class="sc">%&gt;%</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="fu">tidypredict_to_column</span>(model) <span class="sc">%&gt;%</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="fu">glimpse</span>()</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; Rows: 32</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; Columns: 12</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; $ mpg  &lt;dbl&gt; 21.0, 21.0, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 22.8, 19.2, 17.8,…</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; $ cyl  &lt;dbl&gt; 6, 6, 4, 6, 8, 6, 8, 4, 4, 6, 6, 8, 8, 8, 8, 8, 8, 4, 4, 4, 4, 8,…</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; $ disp &lt;dbl&gt; 160.0, 160.0, 108.0, 258.0, 360.0, 225.0, 360.0, 146.7, 140.8, 16…</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; $ hp   &lt;dbl&gt; 110, 110, 93, 110, 175, 105, 245, 62, 95, 123, 123, 180, 180, 180…</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; $ drat &lt;dbl&gt; 3.90, 3.90, 3.85, 3.08, 3.15, 2.76, 3.21, 3.69, 3.92, 3.92, 3.92,…</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; $ wt   &lt;dbl&gt; 2.620, 2.875, 2.320, 3.215, 3.440, 3.460, 3.570, 3.190, 3.150, 3.…</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; $ qsec &lt;dbl&gt; 16.46, 17.02, 18.61, 19.44, 17.02, 20.22, 15.84, 20.00, 22.90, 18…</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; $ vs   &lt;dbl&gt; 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0,…</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; $ am   &lt;dbl&gt; 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,…</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; $ gear &lt;dbl&gt; 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3,…</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; $ carb &lt;dbl&gt; 4, 4, 1, 1, 2, 1, 4, 2, 2, 4, 4, 3, 3, 3, 4, 4, 4, 1, 2, 1, 1, 2,…</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; $ fit  &lt;dbl&gt; 22.97276, 22.97276, 24.66776, 17.82025, 15.33411, 17.82025, 14.97…</span></span></code></pre></div></li>
+<li><p>Confirm that the results match the model’s <code>predict()</code>
+results</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model, mtcars)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div></li>
+<li><p>Get the SQL translation</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_mssql</span>())</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; ((((CASE</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 2.975)</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 163.8)</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 7.0)</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 23.0583333333333</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 3.545)</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 380.0)</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 7.0)</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 16.9125</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; ELSE 15.125</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co"> + CASE</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 3.16)</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 163.8)</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 7.0)</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 24.3642857142857</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt; ELSE 15.7444444444444</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 2.26)</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 101.55)</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 5.0)</span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 30.0857142857143</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 7.0)</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 250.4)</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 3.3125)</span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt; ELSE 1</span></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 20.4428571428571</span></span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt; ELSE 14.6454545454545</span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 163.8)</span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 3.3125)</span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 5.0)</span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 25.6733333333333</span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt; ELSE 14.6764705882353</span></span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 2.41)</span></span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 120.65)</span></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 5.0)</span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 29.8</span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb5-58"><a href="#cb5-58" tabindex="-1"></a><span class="co">#&gt; WHEN (CASE</span></span>
+<span id="cb5-59"><a href="#cb5-59" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL))) THEN ([disp] &lt; 266.9)</span></span>
+<span id="cb5-60"><a href="#cb5-60" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([cyl] IS NULL))) THEN ([cyl] &lt; 7.0)</span></span>
+<span id="cb5-61"><a href="#cb5-61" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([wt] IS NULL))) THEN ([wt] &lt; 3.325)</span></span>
+<span id="cb5-62"><a href="#cb5-62" tabindex="-1"></a><span class="co">#&gt; ELSE 0</span></span>
+<span id="cb5-63"><a href="#cb5-63" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) THEN 21.325</span></span>
+<span id="cb5-64"><a href="#cb5-64" tabindex="-1"></a><span class="co">#&gt; WHEN (NOT(([disp] IS NULL)) OR NOT(([cyl] IS NULL)) OR NOT(([wt] IS NULL))) THEN 14.6916666666667</span></span>
+<span id="cb5-65"><a href="#cb5-65" tabindex="-1"></a><span class="co">#&gt; ELSE 18.0083333333333</span></span>
+<span id="cb5-66"><a href="#cb5-66" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb5-67"><a href="#cb5-67" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) / 5</span></span></code></pre></div></li>
+</ul>
+</div>
+<div id="classification" class="section level2">
+<h2>Classification</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">100</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> baguette<span class="sc">::</span><span class="fu">bagger</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris, <span class="at">times =</span> <span class="dv">3</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model, iris)</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 0</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div>
+<p>C5.0 trees are only fit for classification, and are used by passing
+<code>base_model = &quot;C5.0&quot;</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">100</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>model <span class="ot">&lt;-</span> baguette<span class="sc">::</span><span class="fu">bagger</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  Species <span class="sc">~</span> .,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">data =</span> iris,</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">base_model =</span> <span class="st">&quot;C5.0&quot;</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">3</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>)</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model, iris)</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 0</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div>
+</div>
+<div id="parsnip" class="section level2">
+<h2>parsnip</h2>
+<p>Models fit with <code>parsnip::bag_tree()</code> and the
+<code>&quot;rpart&quot;</code> or <code>&quot;C5.0&quot;</code> engine are supported as
+well.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">100</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">bag_tree</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;rpart&quot;</span>, <span class="at">times =</span> <span class="dv">5</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl <span class="sc">+</span> disp, <span class="at">data =</span> mtcars)</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; (case_when(case_when(!is.na(wt) ~ wt &lt; 2.0775, !is.na(disp) ~ </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 101.55, .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 1.674, .default = FALSE) ~ 30.4, !is.na(wt) ~ 33.9, </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt;     .default = 32.15), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.975, !is.na(disp) ~ disp &lt; 163.8, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt;     7, .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt;     2.3925, !is.na(disp) ~ disp &lt; 114.05, .default = FALSE) ~ </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt;     22.8, .default = case_when(case_when(!is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt;     5, !is.na(disp) ~ disp &lt; 133, !is.na(wt) ~ wt &lt; 2.5425, .default = FALSE) ~ </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.6225, .default = TRUE) ~ </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt;         21.5, .default = 21.4), .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 152.5, !is.na(wt) ~ !wt &lt; 2.695, .default = FALSE) ~ </span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt;     19.7, .default = 21))), .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 450, !is.na(wt) ~ wt &lt; 4.66, .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 355.5, !is.na(wt) ~ wt &lt; 3.7875, .default = TRUE) ~ </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(disp) ~ disp &lt; 288.4, !is.na(wt) ~ </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;         !wt &lt; 3.65, !is.na(cyl) ~ cyl &lt; 7, .default = FALSE) ~ </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.9, .default = TRUE) ~ </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;             case_when(case_when(!is.na(wt) ~ wt &lt; 3.595, .default = TRUE) ~ </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt;                 case_when(case_when(!is.na(wt) ~ wt &lt; 3.45, .default = FALSE) ~ </span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;                   17.8, !is.na(wt) ~ 18.1, .default = 17.95), </span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt;                 .default = 17.3), .default = 16.4), .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 311, !is.na(wt) ~ !wt &lt; 3.545, .default = FALSE) ~ </span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(disp) ~ disp &lt; 302.5, .default = TRUE) ~ </span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="co">#&gt;             15, .default = 15.2), !is.na(disp) | !is.na(wt) ~ </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.345, .default = FALSE) ~ </span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="co">#&gt;             15.8, .default = 15.5), .default = 15.3333333333333)), </span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(case_when(!is.na(wt) ~ wt &lt; 4.595, .default = TRUE) ~ </span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.7075, !is.na(disp) ~ </span></span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a><span class="co">#&gt;             disp &lt; 380, .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-39"><a href="#cb8-39" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.505, .default = TRUE) ~ 18.7, .default = 14.3), </span></span>
+<span id="cb8-40"><a href="#cb8-40" tabindex="-1"></a><span class="co">#&gt;             !is.na(wt) | !is.na(disp) ~ 19.2, .default = 18.2166666666667), </span></span>
+<span id="cb8-41"><a href="#cb8-41" tabindex="-1"></a><span class="co">#&gt;         .default = 14.7)), .default = 10.4))) + case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-42"><a href="#cb8-42" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.26, !is.na(disp) ~ disp &lt; 101.55, .default = FALSE) ~ </span></span>
+<span id="cb8-43"><a href="#cb8-43" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.17, !is.na(disp) ~ </span></span>
+<span id="cb8-44"><a href="#cb8-44" tabindex="-1"></a><span class="co">#&gt;         !disp &lt; 78.85, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-45"><a href="#cb8-45" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 1.724, .default = FALSE) ~ 30.4, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-46"><a href="#cb8-46" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 2.0375, .default = FALSE) ~ 27.3, !is.na(wt) ~ 26, </span></span>
+<span id="cb8-47"><a href="#cb8-47" tabindex="-1"></a><span class="co">#&gt;         .default = 26.65)), .default = 32.4), .default = case_when(case_when(!is.na(cyl) ~ </span></span>
+<span id="cb8-48"><a href="#cb8-48" tabindex="-1"></a><span class="co">#&gt;     cyl &lt; 7, !is.na(disp) ~ disp &lt; 266.9, !is.na(wt) ~ wt &lt; 3.515, </span></span>
+<span id="cb8-49"><a href="#cb8-49" tabindex="-1"></a><span class="co">#&gt;     .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-50"><a href="#cb8-50" tabindex="-1"></a><span class="co">#&gt;     3.3275, !is.na(disp) ~ disp &lt; 163.8, .default = TRUE) ~ case_when(case_when(!is.na(cyl) ~ </span></span>
+<span id="cb8-51"><a href="#cb8-51" tabindex="-1"></a><span class="co">#&gt;     cyl &lt; 5, !is.na(disp) ~ disp &lt; 142.9, !is.na(wt) ~ wt &lt; 2.5425, </span></span>
+<span id="cb8-52"><a href="#cb8-52" tabindex="-1"></a><span class="co">#&gt;     .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-53"><a href="#cb8-53" tabindex="-1"></a><span class="co">#&gt;     2.3925, .default = FALSE) ~ 22.8, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-54"><a href="#cb8-54" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.965, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-55"><a href="#cb8-55" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.6225, .default = FALSE) ~ 21.5, .default = 21.4), </span></span>
+<span id="cb8-56"><a href="#cb8-56" tabindex="-1"></a><span class="co">#&gt;     .default = 22.8)), !is.na(cyl) | !is.na(disp) | !is.na(wt) ~ </span></span>
+<span id="cb8-57"><a href="#cb8-57" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(disp) ~ disp &lt; 152.5, .default = FALSE) ~ </span></span>
+<span id="cb8-58"><a href="#cb8-58" tabindex="-1"></a><span class="co">#&gt;         19.7, .default = case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-59"><a href="#cb8-59" tabindex="-1"></a><span class="co">#&gt;         3.045, .default = TRUE) ~ 21, .default = 21.4)), .default = 21.4), </span></span>
+<span id="cb8-60"><a href="#cb8-60" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(case_when(!is.na(wt) ~ wt &lt; 3.45, .default = FALSE) ~ </span></span>
+<span id="cb8-61"><a href="#cb8-61" tabindex="-1"></a><span class="co">#&gt;         19.2, !is.na(wt) ~ 18.1, .default = 18.65)), .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-62"><a href="#cb8-62" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 430, !is.na(wt) ~ wt &lt; 4.747, .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-63"><a href="#cb8-63" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 380, !is.na(wt) ~ wt &lt; 3.8425, .default = TRUE) ~ </span></span>
+<span id="cb8-64"><a href="#cb8-64" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 3.955, .default = TRUE) ~ </span></span>
+<span id="cb8-65"><a href="#cb8-65" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.81, .default = TRUE) ~ </span></span>
+<span id="cb8-66"><a href="#cb8-66" tabindex="-1"></a><span class="co">#&gt;             case_when(case_when(!is.na(disp) ~ disp &lt; 355.5, </span></span>
+<span id="cb8-67"><a href="#cb8-67" tabindex="-1"></a><span class="co">#&gt;                 .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-68"><a href="#cb8-68" tabindex="-1"></a><span class="co">#&gt;                 disp &lt; 326, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-69"><a href="#cb8-69" tabindex="-1"></a><span class="co">#&gt;                 wt &lt; 3.675, .default = FALSE) ~ 15, .default = 15.2), </span></span>
+<span id="cb8-70"><a href="#cb8-70" tabindex="-1"></a><span class="co">#&gt;                 .default = 15.8), .default = 14.3), .default = 13.3), </span></span>
+<span id="cb8-71"><a href="#cb8-71" tabindex="-1"></a><span class="co">#&gt;         .default = 16.4), .default = 19.2), .default = 10.4))) + </span></span>
+<span id="cb8-72"><a href="#cb8-72" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.26, !is.na(disp) ~ </span></span>
+<span id="cb8-73"><a href="#cb8-73" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 101.55, !is.na(cyl) ~ cyl &lt; 5, .default = FALSE) ~ </span></span>
+<span id="cb8-74"><a href="#cb8-74" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(disp) ~ disp &lt; 78.85, !is.na(wt) ~ </span></span>
+<span id="cb8-75"><a href="#cb8-75" tabindex="-1"></a><span class="co">#&gt;             !wt &lt; 2.0675, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-76"><a href="#cb8-76" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 1.9075, !is.na(disp) ~ disp &lt; 77.2, .default = FALSE) ~ </span></span>
+<span id="cb8-77"><a href="#cb8-77" tabindex="-1"></a><span class="co">#&gt;             30.4, !is.na(wt) | !is.na(disp) ~ 32.4, .default = 31.4), </span></span>
+<span id="cb8-78"><a href="#cb8-78" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-79"><a href="#cb8-79" tabindex="-1"></a><span class="co">#&gt;                 1.724, .default = FALSE) ~ 30.4, .default = 27.3)), </span></span>
+<span id="cb8-80"><a href="#cb8-80" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(case_when(!is.na(cyl) ~ cyl &lt; 7, </span></span>
+<span id="cb8-81"><a href="#cb8-81" tabindex="-1"></a><span class="co">#&gt;             !is.na(disp) ~ disp &lt; 250.4, !is.na(wt) ~ wt &lt; 3.3125, </span></span>
+<span id="cb8-82"><a href="#cb8-82" tabindex="-1"></a><span class="co">#&gt;             .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-83"><a href="#cb8-83" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.315, !is.na(disp) ~ disp &lt; 163.8, .default = TRUE) ~ </span></span>
+<span id="cb8-84"><a href="#cb8-84" tabindex="-1"></a><span class="co">#&gt;             case_when(case_when(!is.na(wt) ~ wt &lt; 3.0325, .default = TRUE) ~ </span></span>
+<span id="cb8-85"><a href="#cb8-85" tabindex="-1"></a><span class="co">#&gt;                 case_when(case_when(!is.na(wt) ~ wt &lt; 2.47, .default = FALSE) ~ </span></span>
+<span id="cb8-86"><a href="#cb8-86" tabindex="-1"></a><span class="co">#&gt;                   22.8, .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-87"><a href="#cb8-87" tabindex="-1"></a><span class="co">#&gt;                   disp &lt; 152.5, !is.na(wt) ~ !wt &lt; 2.695, .default = FALSE) ~ </span></span>
+<span id="cb8-88"><a href="#cb8-88" tabindex="-1"></a><span class="co">#&gt;                   case_when(case_when(!is.na(wt) ~ wt &lt; 2.775, </span></span>
+<span id="cb8-89"><a href="#cb8-89" tabindex="-1"></a><span class="co">#&gt;                     .default = TRUE) ~ 19.7, .default = 21.4), </span></span>
+<span id="cb8-90"><a href="#cb8-90" tabindex="-1"></a><span class="co">#&gt;                   .default = 21)), .default = 24.4), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-91"><a href="#cb8-91" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.45, !is.na(disp) ~ disp &lt; 196.3, .default = FALSE) ~ </span></span>
+<span id="cb8-92"><a href="#cb8-92" tabindex="-1"></a><span class="co">#&gt;             18.5, !is.na(wt) | !is.na(disp) ~ 18.1, .default = 18.3)), </span></span>
+<span id="cb8-93"><a href="#cb8-93" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-94"><a href="#cb8-94" tabindex="-1"></a><span class="co">#&gt;                 4.49, !is.na(disp) ~ disp &lt; 410, .default = TRUE) ~ </span></span>
+<span id="cb8-95"><a href="#cb8-95" tabindex="-1"></a><span class="co">#&gt;                 case_when(case_when(!is.na(disp) ~ disp &lt; 339, </span></span>
+<span id="cb8-96"><a href="#cb8-96" tabindex="-1"></a><span class="co">#&gt;                   .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-97"><a href="#cb8-97" tabindex="-1"></a><span class="co">#&gt;                   wt &lt; 3.65, .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-98"><a href="#cb8-98" tabindex="-1"></a><span class="co">#&gt;                   disp &lt; 311, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-99"><a href="#cb8-99" tabindex="-1"></a><span class="co">#&gt;                   wt &lt; 3.5025, .default = TRUE) ~ 15.2, .default = 15), </span></span>
+<span id="cb8-100"><a href="#cb8-100" tabindex="-1"></a><span class="co">#&gt;                   .default = 15.5), .default = 17.3), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-101"><a href="#cb8-101" tabindex="-1"></a><span class="co">#&gt;                   wt &lt; 3.505, .default = TRUE) ~ 18.7, .default = 14.3)), </span></span>
+<span id="cb8-102"><a href="#cb8-102" tabindex="-1"></a><span class="co">#&gt;                 .default = 10.4))) + case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-103"><a href="#cb8-103" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 163.8, !is.na(wt) ~ wt &lt; 3.3125, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb8-104"><a href="#cb8-104" tabindex="-1"></a><span class="co">#&gt;     5, .default = FALSE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-105"><a href="#cb8-105" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 101.55, !is.na(wt) ~ wt &lt; 2.0375, .default = FALSE) ~ </span></span>
+<span id="cb8-106"><a href="#cb8-106" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.0675, .default = TRUE) ~ </span></span>
+<span id="cb8-107"><a href="#cb8-107" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 1.775, !is.na(disp) ~ </span></span>
+<span id="cb8-108"><a href="#cb8-108" tabindex="-1"></a><span class="co">#&gt;             !disp &lt; 87.05, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-109"><a href="#cb8-109" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 1.564, .default = TRUE) ~ 30.4, .default = 30.4), </span></span>
+<span id="cb8-110"><a href="#cb8-110" tabindex="-1"></a><span class="co">#&gt;             .default = 27.3), .default = 32.4), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-111"><a href="#cb8-111" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.23, .default = FALSE) ~ 26, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-112"><a href="#cb8-112" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 3.0325, !is.na(disp) ~ disp &lt; 133.85, .default = TRUE) ~ </span></span>
+<span id="cb8-113"><a href="#cb8-113" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 2.3925, .default = FALSE) ~ </span></span>
+<span id="cb8-114"><a href="#cb8-114" tabindex="-1"></a><span class="co">#&gt;         22.8, .default = case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-115"><a href="#cb8-115" tabindex="-1"></a><span class="co">#&gt;         2.8275, !is.na(cyl) ~ cyl &lt; 5, !is.na(disp) ~ disp &lt; </span></span>
+<span id="cb8-116"><a href="#cb8-116" tabindex="-1"></a><span class="co">#&gt;         140.5, .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-117"><a href="#cb8-117" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 2.6225, .default = FALSE) ~ 21.5, !is.na(wt) ~ 21.4, </span></span>
+<span id="cb8-118"><a href="#cb8-118" tabindex="-1"></a><span class="co">#&gt;         .default = 21.45), !is.na(wt) | !is.na(cyl) | !is.na(disp) ~ </span></span>
+<span id="cb8-119"><a href="#cb8-119" tabindex="-1"></a><span class="co">#&gt;         21, .default = 21.225)), .default = 24.4))), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-120"><a href="#cb8-120" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 4.66, !is.na(disp) ~ disp &lt; 410, .default = TRUE) ~ </span></span>
+<span id="cb8-121"><a href="#cb8-121" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(disp) ~ disp &lt; 288.4, !is.na(wt) ~ </span></span>
+<span id="cb8-122"><a href="#cb8-122" tabindex="-1"></a><span class="co">#&gt;         !wt &lt; 3.65, !is.na(cyl) ~ cyl &lt; 7, .default = FALSE) ~ </span></span>
+<span id="cb8-123"><a href="#cb8-123" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.755, !is.na(cyl) ~ </span></span>
+<span id="cb8-124"><a href="#cb8-124" tabindex="-1"></a><span class="co">#&gt;             cyl &lt; 7, !is.na(disp) ~ disp &lt; 221.7, .default = TRUE) ~ </span></span>
+<span id="cb8-125"><a href="#cb8-125" tabindex="-1"></a><span class="co">#&gt;             case_when(case_when(!is.na(wt) ~ wt &lt; 3.585, .default = TRUE) ~ </span></span>
+<span id="cb8-126"><a href="#cb8-126" tabindex="-1"></a><span class="co">#&gt;                 17.8, .default = 17.3), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-127"><a href="#cb8-127" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.925, .default = FALSE) ~ 15.2, !is.na(wt) ~ </span></span>
+<span id="cb8-128"><a href="#cb8-128" tabindex="-1"></a><span class="co">#&gt;             16.4, .default = 15.8)), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-129"><a href="#cb8-129" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.545, !is.na(disp) ~ disp &lt; 334, .default = TRUE) ~ </span></span>
+<span id="cb8-130"><a href="#cb8-130" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(disp) ~ disp &lt; 311, .default = TRUE) ~ </span></span>
+<span id="cb8-131"><a href="#cb8-131" tabindex="-1"></a><span class="co">#&gt;             15.2, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-132"><a href="#cb8-132" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.345, .default = FALSE) ~ 15.8, !is.na(wt) ~ </span></span>
+<span id="cb8-133"><a href="#cb8-133" tabindex="-1"></a><span class="co">#&gt;             15.5, .default = 15.65)), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-134"><a href="#cb8-134" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.705, .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-135"><a href="#cb8-135" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 330.5, .default = FALSE) ~ 15, .default = 14.3), </span></span>
+<span id="cb8-136"><a href="#cb8-136" tabindex="-1"></a><span class="co">#&gt;         .default = 13.3))), .default = 10.4)) + case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-137"><a href="#cb8-137" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.41, !is.na(disp) ~ disp &lt; 120.65, !is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb8-138"><a href="#cb8-138" tabindex="-1"></a><span class="co">#&gt;     5, .default = FALSE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-139"><a href="#cb8-139" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 107.7, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-140"><a href="#cb8-140" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 1.9075, !is.na(disp) ~ !disp &lt; 86.9, .default = TRUE) ~ </span></span>
+<span id="cb8-141"><a href="#cb8-141" tabindex="-1"></a><span class="co">#&gt;     30.4, .default = 32.4), .default = 26), .default = case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-142"><a href="#cb8-142" tabindex="-1"></a><span class="co">#&gt;     disp &lt; 266.9, !is.na(cyl) ~ cyl &lt; 7, !is.na(wt) ~ wt &lt; 3.325, </span></span>
+<span id="cb8-143"><a href="#cb8-143" tabindex="-1"></a><span class="co">#&gt;     .default = FALSE) ~ case_when(case_when(!is.na(cyl) ~ cyl &lt; </span></span>
+<span id="cb8-144"><a href="#cb8-144" tabindex="-1"></a><span class="co">#&gt;     5, !is.na(disp) ~ disp &lt; 153.35, !is.na(wt) ~ wt &lt; 3.2025, </span></span>
+<span id="cb8-145"><a href="#cb8-145" tabindex="-1"></a><span class="co">#&gt;     .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ wt &lt; </span></span>
+<span id="cb8-146"><a href="#cb8-146" tabindex="-1"></a><span class="co">#&gt;     3.17, !is.na(disp) ~ disp &lt; 143.75, .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-147"><a href="#cb8-147" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 2.965, .default = TRUE) ~ 21.4, .default = 22.8), .default = 24.4), </span></span>
+<span id="cb8-148"><a href="#cb8-148" tabindex="-1"></a><span class="co">#&gt;     !is.na(cyl) | !is.na(disp) | !is.na(wt) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-149"><a href="#cb8-149" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.3275, !is.na(disp) ~ disp &lt; 163.8, .default = TRUE) ~ </span></span>
+<span id="cb8-150"><a href="#cb8-150" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(disp) ~ disp &lt; 152.5, .default = FALSE) ~ </span></span>
+<span id="cb8-151"><a href="#cb8-151" tabindex="-1"></a><span class="co">#&gt;             19.7, .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-152"><a href="#cb8-152" tabindex="-1"></a><span class="co">#&gt;             wt &lt; 3.045, .default = TRUE) ~ 21, .default = 21.4)), </span></span>
+<span id="cb8-153"><a href="#cb8-153" tabindex="-1"></a><span class="co">#&gt;         .default = 18.5), .default = 21.325), !is.na(disp) | </span></span>
+<span id="cb8-154"><a href="#cb8-154" tabindex="-1"></a><span class="co">#&gt;     !is.na(cyl) | !is.na(wt) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-155"><a href="#cb8-155" tabindex="-1"></a><span class="co">#&gt;     wt &lt; 4.66, !is.na(disp) ~ disp &lt; 410, .default = TRUE) ~ </span></span>
+<span id="cb8-156"><a href="#cb8-156" tabindex="-1"></a><span class="co">#&gt;     case_when(case_when(!is.na(wt) ~ wt &lt; 3.505, !is.na(disp) ~ </span></span>
+<span id="cb8-157"><a href="#cb8-157" tabindex="-1"></a><span class="co">#&gt;         !disp &lt; 302.5, .default = FALSE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-158"><a href="#cb8-158" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.4375, .default = TRUE) ~ case_when(case_when(!is.na(disp) ~ </span></span>
+<span id="cb8-159"><a href="#cb8-159" tabindex="-1"></a><span class="co">#&gt;         disp &lt; 327.5, .default = TRUE) ~ 15.2, .default = 15.8), </span></span>
+<span id="cb8-160"><a href="#cb8-160" tabindex="-1"></a><span class="co">#&gt;         .default = 18.7), .default = case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-161"><a href="#cb8-161" tabindex="-1"></a><span class="co">#&gt;         wt &lt; 3.955, !is.na(disp) ~ !disp &lt; 288.4, .default = TRUE) ~ </span></span>
+<span id="cb8-162"><a href="#cb8-162" tabindex="-1"></a><span class="co">#&gt;         case_when(case_when(!is.na(wt) ~ wt &lt; 3.81, .default = TRUE) ~ </span></span>
+<span id="cb8-163"><a href="#cb8-163" tabindex="-1"></a><span class="co">#&gt;             case_when(case_when(!is.na(disp) ~ disp &lt; 330.5, </span></span>
+<span id="cb8-164"><a href="#cb8-164" tabindex="-1"></a><span class="co">#&gt;                 .default = TRUE) ~ case_when(case_when(!is.na(wt) ~ </span></span>
+<span id="cb8-165"><a href="#cb8-165" tabindex="-1"></a><span class="co">#&gt;                 wt &lt; 3.675, .default = FALSE) ~ 15, !is.na(wt) ~ </span></span>
+<span id="cb8-166"><a href="#cb8-166" tabindex="-1"></a><span class="co">#&gt;                 15.2, .default = 15.1), .default = 14.3), .default = 13.3), </span></span>
+<span id="cb8-167"><a href="#cb8-167" tabindex="-1"></a><span class="co">#&gt;         .default = 16.4)), .default = 10.4), .default = 18.0083333333333)))/5L</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

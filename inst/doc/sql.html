@@ -364,14 +364,14 @@ modifications</p>
 <p>A new database is created using <code>RSQLite</code>.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(DBI)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>con <span class="ot">&lt;-</span> <span class="fu">dbConnect</span>(RSQLite<span class="sc">::</span><span class="fu">SQLite</span>(), <span class="at">path =</span> <span class="st">&quot;:memory:&quot;</span>)</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>db_fligths <span class="ot">&lt;-</span> <span class="fu">copy_to</span>(con, flights_table)</span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>con <span class="ot">&lt;-</span> <span class="fu">dbConnect</span>(RSQLite<span class="sc">::</span><span class="fu">SQLite</span>(), <span class="at">dbname =</span> <span class="st">&quot;:memory:&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>db_flights <span class="ot">&lt;-</span> <span class="fu">copy_to</span>(con, flights_table)</span></code></pre></div>
 </div>
 <div id="model-preparation" class="section level2">
 <h2>Model preparation</h2>
 <p>A sample is downloaded from the database for modeling. This example
 already selects the needed variables.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> db_fligths <span class="sc">%&gt;%</span></span>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df <span class="ot">&lt;-</span> db_flights <span class="sc">%&gt;%</span></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="fu">select</span>(dep_delay, hour, distance) <span class="sc">%&gt;%</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">1000</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="fu">collect</span>()</span></code></pre></div>
@@ -397,7 +397,7 @@ automated script.</p>
 </div>
 <div id="scenario-1---update-scores" class="section level2">
 <h2>Scenario 1 - Update scores</h2>
-<p>In this scenario, The table that supplies the term values is also the
+<p>In this scenario, the table that supplies the term values is also the
 recipient of the new score. This is done by updating a specific field in
 the table. For this example, the field is called
 <code>current_score</code>. The following SQL UPDATE statement should
@@ -418,12 +418,12 @@ to automate the scoring, the next line can be used:</p>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;   ROWS Fetched: 0 [complete]</span></span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;        Changed: 336776</span></span></code></pre></div>
 <p>Here is a sample of the newly populated field:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>db_fligths <span class="sc">%&gt;%</span></span>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>db_flights <span class="sc">%&gt;%</span></span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="fu">select</span>(current_score) <span class="sc">%&gt;%</span></span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">10</span>)</span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; Warning: Closing open result set, pending rows</span></span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; # A query:  ?? x 1</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; # Database: sqlite 3.53.3 []</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; # Database: sqlite 3.53.3 [:memory:]</span></span>
 <span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt;    current_score</span></span>
 <span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt;            &lt;dbl&gt;</span></span>
 <span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt;  1       -0.969 </span></span>
@@ -437,13 +437,13 @@ to automate the scoring, the next line can be used:</p>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="co">#&gt;  9        1.82  </span></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="co">#&gt; 10        2.47</span></span></code></pre></div>
 </div>
-<div id="scenario-2--append-new-scores" class="section level2">
-<h2>Scenario 2- Append new scores</h2>
+<div id="scenario-2---append-new-scores" class="section level2">
+<h2>Scenario 2 - Append new scores</h2>
 <p>There may be the need to retain not only the new score, but when it
 was determined and its history. This is usually possible because the
 source of record possesses a unique key identifier per entity, such as
-transaction ID or customer ID. In the example, <code>flights_id</code>
-is the unique identifier.</p>
+transaction ID or customer ID. In the example, <code>flight_id</code> is
+the unique identifier.</p>
 <p>In this example, the new scores will be stored in a new table called
 <code>daily_scores</code>. The following code is part of the example
 preparation, it creates the table and seeds it with a single row. This
@@ -457,19 +457,18 @@ purposes of this example.</p>
 <span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>    <span class="at">date =</span> <span class="st">&quot;&quot;</span></span>
 <span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  )</span>
 <span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>)</span></code></pre></div>
-<p>The plan is to use a SQL statement that most vendors support, is
-called INSERT INTO SELECT. The idea is to use <code>dplyr</code>
-laziness to prepare the data transformation and predictions, but it’s
-not going to be executed until is parsed into SQL and sent as part of a
-another statement. The INSERT INTO SELECT statement allows for the
-results of a query to be saved in a table, and without leaving the
-database.</p>
+<p>The plan is to use a SQL statement that most vendors support, called
+INSERT INTO SELECT. The idea is to use <code>dplyr</code> laziness to
+prepare the data transformation and predictions, but it’s not going to
+be executed until it is parsed into SQL and sent as part of another
+statement. The INSERT INTO SELECT statement allows for the results of a
+query to be saved in a table, and without leaving the database.</p>
 <p>In this example, predictions are going to be executed for just the
 records in the month of December. The data is filtered, and then
 <code>tidypredict_to_column()</code> is used to create the new fit
-field. The results are then transformed to match to the structure of the
+field. The results are then transformed to match the structure of the
 new <code>daily_scores</code> table.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>new_predictions <span class="ot">&lt;-</span> db_fligths <span class="sc">%&gt;%</span></span>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>new_predictions <span class="ot">&lt;-</span> db_flights <span class="sc">%&gt;%</span></span>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="fu">filter</span>(month <span class="sc">==</span> <span class="dv">12</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="fu">tidypredict_to_column</span>(model, <span class="at">vars =</span> <span class="st">&quot;score&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="fu">select</span>(</span>
@@ -506,14 +505,14 @@ is being used to automate the scoring, the next line can be used:</p>
 <p>A simple table join can be used to confirm that the new update
 worked. For real life scenarios, a more sophisticated query should be
 performed in order to only get the latest score. For this example, we
-simple filter on the same date we inserted</p>
+simply filter on the same date we inserted.</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">tbl</span>(con, <span class="st">&quot;daily_scores&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="fu">inner_join</span>(<span class="fu">tbl</span>(con, <span class="st">&quot;flights_table&quot;</span>), <span class="at">by =</span> <span class="st">&quot;flight_id&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="fu">filter</span>(date <span class="sc">==</span> <span class="st">&quot;01/01/2018&quot;</span>) <span class="sc">%&gt;%</span></span>
 <span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="fu">select</span>(dep_delay, hour, distance, score, date)</span>
 <span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; Warning: Closing open result set, pending rows</span></span>
 <span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; # A query:  ?? x 5</span></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; # Database: sqlite 3.53.3 []</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; # Database: sqlite 3.53.3 [:memory:]</span></span>
 <span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt;    dep_delay  hour distance   score date      </span></span>
 <span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt;        &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;chr&gt;     </span></span>
 <span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt;  1        14    23     1617 23.3    01/01/2018</span></span>

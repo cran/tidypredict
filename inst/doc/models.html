@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Supported models</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Supported models</h1>
+
+
+
+<p>This is the list of models tidypredict can parse: 43 fitted model
+classes from 30 modeling packages.</p>
+<p>tidypredict dispatches on the class of the fitted model, so a model
+is supported if the “Fit with” column covers how it was fitted. Models
+fitted through <a href="https://parsnip.tidymodels.org/">parsnip</a> are
+unwrapped and handed to the same code, so the “parsnip” column is not a
+separate list of capabilities: it names the spec and engine that produce
+each fitted class. A blank there means tidypredict has no test for that
+route, not that it is known to fail.</p>
+<div id="regression" class="section level2">
+<h2>Regression</h2>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Fit with</th>
+<th>parsnip</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Linear regression</td>
+<td><code>stats::lm()</code></td>
+<td><code>linear_reg(engine = &quot;lm&quot;)</code></td>
+<td><a href="lm.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Generalized linear regression</td>
+<td><code>stats::glm()</code></td>
+<td><code>linear_reg(engine = &quot;glm&quot;)</code>,
+<code>logistic_reg(engine = &quot;glm&quot;)</code></td>
+<td><a href="glm.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Regularized regression</td>
+<td><code>glmnet::glmnet()</code></td>
+<td><code>linear_reg()</code>, <code>logistic_reg()</code>,
+<code>multinom_reg()</code> with <code>engine = &quot;glmnet&quot;</code></td>
+<td><a href="glmnet.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Regularized linear models</td>
+<td><code>LiblineaR::LiblineaR()</code></td>
+<td><code>logistic_reg(engine = &quot;LiblineaR&quot;)</code>,
+<code>svm_linear(engine = &quot;LiblineaR&quot;)</code></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Quantile regression</td>
+<td><code>quantreg::rq()</code>, <code>quantreg::rqs()</code></td>
+<td><code>linear_reg(engine = &quot;quantreg&quot;)</code></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Multinomial regression</td>
+<td><code>nnet::multinom()</code></td>
+<td><code>multinom_reg(engine = &quot;nnet&quot;)</code></td>
+<td><a href="multinom.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Support vector machine</td>
+<td><code>kernlab::ksvm()</code></td>
+<td><code>svm_linear(engine = &quot;kernlab&quot;)</code></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Neural network</td>
+<td><code>nnet::nnet()</code></td>
+<td><code>mlp(engine = &quot;nnet&quot;)</code></td>
+<td><a href="nnet.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>MARS</td>
+<td><code>earth::earth()</code></td>
+<td><code>mars(engine = &quot;earth&quot;)</code></td>
+<td><a href="mars.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Partial least squares</td>
+<td><code>mixOmics::pls()</code>, <code>spls()</code>,
+<code>plsda()</code>, <code>splsda()</code></td>
+<td><code>pls(engine = &quot;mixOmics&quot;)</code></td>
+<td><a href="mixOmics.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Null model</td>
+<td><code>parsnip::nullmodel()</code></td>
+<td><code>null_model()</code></td>
+<td><a href="nullmodel.html">article</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="classification-and-discriminant-analysis" class="section level2">
+<h2>Classification and discriminant analysis</h2>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Fit with</th>
+<th>parsnip</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Naive Bayes</td>
+<td><code>naivebayes::naive_bayes()</code>,
+<code>klaR::NaiveBayes()</code></td>
+<td><code>naive_Bayes()</code> with <code>engine = &quot;naivebayes&quot;</code>
+or <code>&quot;klaR&quot;</code></td>
+<td><a href="naivebayes.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Linear discriminant analysis</td>
+<td><code>MASS::lda()</code></td>
+<td><code>discrim_linear(engine = &quot;MASS&quot;)</code></td>
+<td><a href="lda.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Quadratic discriminant analysis</td>
+<td><code>MASS::qda()</code></td>
+<td><code>discrim_quad(engine = &quot;MASS&quot;)</code></td>
+<td><a href="qda.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Flexible discriminant analysis</td>
+<td><code>mda::fda()</code></td>
+<td><code>discrim_linear(engine = &quot;mda&quot;)</code></td>
+<td><a href="fda.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Shrinkage discriminant analysis</td>
+<td><code>sda::sda()</code></td>
+<td><code>discrim_linear(engine = &quot;sda&quot;)</code></td>
+<td><a href="sda.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Regularized discriminant analysis</td>
+<td><code>sparsediscrim::lda_diag()</code>,
+<code>lda_shrink_mean()</code>, <code>lda_shrink_cov()</code>,
+<code>lda_emp_bayes_eigen()</code></td>
+<td><code>discrim_linear(engine = &quot;sparsediscrim&quot;)</code></td>
+<td><a href="sparsediscrim.html">article</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="trees-and-forests" class="section level2">
+<h2>Trees and forests</h2>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Fit with</th>
+<th>parsnip</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Decision tree</td>
+<td><code>rpart::rpart()</code></td>
+<td><code>decision_tree(engine = &quot;rpart&quot;)</code></td>
+<td><a href="rpart.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Decision tree</td>
+<td><code>C50::C5.0()</code></td>
+<td><code>decision_tree(engine = &quot;C5.0&quot;)</code>,
+<code>C5_rules(engine = &quot;C5.0&quot;)</code></td>
+<td><a href="C5.0.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Conditional inference tree</td>
+<td><code>partykit::ctree()</code></td>
+<td></td>
+<td><a href="partykit.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Random forest</td>
+<td><code>randomForest::randomForest()</code></td>
+<td><code>rand_forest(engine = &quot;randomForest&quot;)</code></td>
+<td><a href="rf.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Random forest</td>
+<td><code>ranger::ranger()</code></td>
+<td><code>rand_forest(engine = &quot;ranger&quot;)</code></td>
+<td><a href="ranger.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Conditional inference forest</td>
+<td><code>partykit::cforest()</code></td>
+<td><code>rand_forest(engine = &quot;partykit&quot;)</code></td>
+<td><a href="partykit.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Oblique random forest</td>
+<td><code>aorsf::orsf()</code></td>
+<td><code>rand_forest(engine = &quot;aorsf&quot;)</code></td>
+<td><a href="aorsf.html">article</a></td>
+</tr>
+<tr class="even">
+<td>Bagged trees</td>
+<td><code>baguette::bagger()</code></td>
+<td><code>bag_tree()</code> with <code>engine = &quot;rpart&quot;</code> or
+<code>&quot;C5.0&quot;</code></td>
+<td><a href="bagging.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>BART</td>
+<td><code>dbarts::bart()</code></td>
+<td><code>bart(engine = &quot;dbarts&quot;)</code></td>
+<td><a href="bart.html">article</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="boosting-and-rules" class="section level2">
+<h2>Boosting and rules</h2>
+<table>
+<colgroup>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Fit with</th>
+<th>parsnip</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>XGBoost</td>
+<td><code>xgboost::xgb.train()</code></td>
+<td><code>boost_tree(engine = &quot;xgboost&quot;)</code></td>
+<td><a href="xgboost.html">article</a></td>
+</tr>
+<tr class="even">
+<td>LightGBM</td>
+<td><code>lightgbm::lgb.train()</code></td>
+<td><code>boost_tree(engine = &quot;lightgbm&quot;)</code>, via bonsai</td>
+<td><a href="lightgbm.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>CatBoost</td>
+<td><code>catboost::catboost.train()</code></td>
+<td><code>boost_tree(engine = &quot;catboost&quot;)</code>, via bonsai</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Boosted C5.0 trees</td>
+<td><code>C50::C5.0()</code> with <code>trials</code></td>
+<td><code>boost_tree(engine = &quot;C5.0&quot;)</code></td>
+<td><a href="C5.0.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>Model-based boosting</td>
+<td><code>mboost::blackboost()</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Cubist</td>
+<td><code>Cubist::cubist()</code></td>
+<td><code>cubist_rules(engine = &quot;Cubist&quot;)</code></td>
+<td><a href="cubist.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>RuleFit</td>
+<td><code>xrf::xrf()</code></td>
+<td><code>rule_fit(engine = &quot;xrf&quot;)</code></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>H2O gradient boosting</td>
+<td><code>h2o::h2o.gbm()</code></td>
+<td><code>boost_tree(engine = &quot;h2o_gbm&quot;)</code>, via agua</td>
+<td><a href="h2o.html">article</a></td>
+</tr>
+<tr class="odd">
+<td>H2O RuleFit</td>
+<td><code>h2o::h2o.rulefit()</code></td>
+<td><code>rule_fit(engine = &quot;h2o&quot;)</code>, via agua</td>
+<td><a href="h2o.html">article</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="support-vector-machines-and-non-syntactic-names" class="section level2">
+<h2>Support vector machines and non-syntactic names</h2>
+<p><code>kernlab::ksvm()</code> collects its model matrix with
+<code>data.frame(y, x)</code>, whose default <code>check.names</code>
+runs the column names through <code>make.names(unique = TRUE)</code>. A
+predictor named <code>a:b</code> is therefore stored as
+<code>a.b</code>, and two predictors that mangle to the same name are
+told apart with a <code>.1</code> suffix. The original names are not
+recorded anywhere on the fitted object.</p>
+<p>On the formula interface there is a <code>terms</code> object to
+compare the stored names against, so <code>parse_model()</code> detects
+the ambiguity and aborts. On the matrix interface,
+<code>ksvm(x, y)</code>, there is no <code>terms</code> object, and the
+mangling cannot be detected at all: every name <code>make.names()</code>
+can produce is also a name it leaves alone, so a stored <code>a.b</code>
+is indistinguishable from a model that genuinely had a column named
+<code>a.b</code> and is correct. <code>tidypredict_fit()</code>
+therefore takes the stored names at face value, and a matrix model
+fitted with a non-syntactic column name yields a formula that refers to
+a column your data does not have.</p>
+<p>Give the matrix columns syntactic names before fitting, or use the
+formula interface, which will tell you when it cannot recover a
+name.</p>
+</div>
+<div id="intervals" class="section level2">
+<h2>Intervals</h2>
+<p><code>tidypredict_interval()</code> and
+<code>tidypredict_sql_interval()</code> are narrower than
+<code>tidypredict_fit()</code>: they only support <code>lm()</code> and
+<code>glm()</code> models.</p>
+</div>
+<div id="adding-a-model" class="section level2">
+<h2>Adding a model</h2>
+<p>If a model you need is missing, <a href="https://github.com/tidymodels/tidypredict/issues">open an
+issue</a>. <code>CONTRIBUTING.md</code> describes what a new model
+needs, and the <a href="non-r.html">non-R models</a> article covers the
+other direction: writing a parsed model spec by hand so a model fitted
+outside R can be used here.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

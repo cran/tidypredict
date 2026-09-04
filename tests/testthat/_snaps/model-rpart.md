@@ -3,51 +3,21 @@
     Code
       rlang::expr_text(tf)
     Output
-      [1] "case_when(cyl <= 5 ~ 26.6636363636364, .default = case_when(cyl <= \n    7 ~ 19.7428571428571, .default = 15.1))"
+      [1] "case_when(case_when(!is.na(cyl) ~ cyl < 5, !is.na(am) ~ !am < \n    0.5, .default = FALSE) ~ 26.6636363636364, .default = case_when(case_when(!is.na(cyl) ~ \n    cyl < 7, !is.na(am) ~ !am < 0.5, .default = FALSE) ~ 19.7428571428571, \n    .default = 15.1))"
 
-# formulas produce correct predictions - regression
-
-    Code
-      tidypredict_test(rpart::rpart(mpg ~ am + cyl + wt, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
-# formulas produce correct predictions - classification
+# tidypredict_class_exprs errors on non-rpart model
 
     Code
-      tidypredict_test(rpart::rpart(Species ~ ., data = iris), iris)
-    Output
-      tidypredict test results
-      Difference threshold: 0
-      
-       All results are within the difference threshold
-
-# categorical predictors work correctly
-
-    Code
-      tidypredict_test(rpart::rpart(mpg ~ cyl + wt, data = mtcars2), mtcars2)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
-# .extract_rpart_classprob errors on non-rpart model
-
-    Code
-      .extract_rpart_classprob(list())
+      tidypredict_class_exprs(list())
     Condition
-      Error in `.extract_rpart_classprob()`:
-      ! `model` must be <rpart>, not an empty list.
+      Error in `tidypredict_class_exprs()`:
+      ! `tidypredict_class_exprs()` is not available for models of class <list>.
 
-# .extract_rpart_classprob errors on regression model
+# tidypredict_class_exprs errors on regression model
 
     Code
-      .extract_rpart_classprob(model)
+      tidypredict_class_exprs(model)
     Condition
-      Error in `.extract_rpart_classprob()`:
-      ! `model` must be a classification model (method = 'class').
+      Error in `tidypredict_class_exprs()`:
+      ! Only classification models are supported, not `method = anova`.
 

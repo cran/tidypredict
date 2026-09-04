@@ -3,13 +3,7 @@
 #' @export
 tidypredict_fit.glmnet <- function(model) {
   if (inherits(model, "multnet")) {
-    cli::cli_abort(
-      c(
-        "Multinomial glmnet models are not supported.",
-        "i" = "Models fit with {.code family = \"multinomial\"} have multiple
-        outcome columns which is not supported."
-      )
-    )
+    return(build_fit_formula_multinom(parse_model(model)))
   }
   if (inherits(model, "mrelnet")) {
     cli::cli_abort(
@@ -28,7 +22,27 @@ tidypredict_fit.glmnet <- function(model) {
 
 #' @export
 parse_model.glmnet <- function(model) {
+  if (inherits(model, "multnet")) {
+    return(parse_model_glmnet_multinom(model))
+  }
   parse_model_glmnet(model)
+}
+
+# `glmnet` records only whether an offset was used, never the values, and
+# `predict()` requires them again as `newoffset`. There is nothing on the model
+# to rebuild the offset from, so the model cannot be reproduced at all.
+glmnet_check_no_offset <- function(model, call = rlang::caller_env()) {
+  if (isTRUE(model$offset)) {
+    cli::cli_abort(
+      c(
+        "Models fit with an {.arg offset} are not supported for glmnet.",
+        i = "{.pkg glmnet} stores only a flag, not the offset values, so the
+        prediction cannot be reproduced."
+      ),
+      call = call
+    )
+  }
+  invisible(model)
 }
 
 parse_model_glmnet <- function(model, call = rlang::caller_env()) {
@@ -39,34 +53,18 @@ parse_model_glmnet <- function(model, call = rlang::caller_env()) {
       call = call
     )
   }
+  glmnet_check_no_offset(model, call = call)
   if (inherits(model$beta, "dgCMatrix")) {
     model$beta <- setNames(as.numeric(model$beta), rownames(model$beta))
   }
   coefs <- c("(Intercept)" = unname(model$a0), model$beta)
-
-  names <- names(coefs)
-  values <- as.vector(coefs)
-
-  terms <- map2(values, names, function(value, name) {
-    if (value == 0) {
-      return(NULL)
-    }
-    list(
-      label = name,
-      coef = value,
-      is_intercept = as.integer(name == "(Intercept)"),
-      fields = list(list(type = "ordinary", col = name))
-    )
-  })
-
-  terms <- purrr::discard(terms, is.null)
 
   pm <- list()
   pm$general$model <- class(model)[[2]]
   pm$general$version <- 1
   pm$general$type <- "regression"
   pm$general$is_glm <- 1
-  pm$terms <- terms
+  pm$terms <- glmnet_terms(coefs)
 
   if (inherits(model, "elnet")) {
     pm$general$family <- "gaussian"
@@ -93,6 +91,55 @@ parse_model_glmnet <- function(model, call = rlang::caller_env()) {
   } # nocov end
 
   as_parsed_model(pm)
+}
+
+# glmnet is fit from a numeric matrix, so each coefficient names a column
+# directly and penalised-away coefficients are dropped.
+glmnet_terms <- function(coefs) {
+  build_terms(
+    as.vector(coefs),
+    names(coefs),
+    vars = NULL,
+    drop_zero = TRUE
+  )
+}
+
+parse_model_glmnet_multinom <- function(model, call = rlang::caller_env()) {
+  if (length(model$lambda) != 1) {
+    cli::cli_abort(
+      "{.fn tidypredict_fit} requires that there are only 1 penalty selected,
+      {length(model$lambda)} were provided.",
+      call = call
+    )
+  }
+  glmnet_check_no_offset(model, call = call)
+
+  classes <- model$classnames
+  a0 <- model$a0
+
+  class_terms <- lapply(classes, function(cl) {
+    beta <- model$beta[[cl]]
+    beta <- setNames(as.numeric(beta), rownames(beta))
+    coefs <- c("(Intercept)" = unname(a0[cl, ]), beta)
+    glmnet_terms(coefs)
+  })
+
+  new_multiclass_parsed_model(
+    class(model)[[2]],
+    classes,
+    class_terms,
+    version = 1
+  )
+}
+
+build_fit_formula_multinom <- function(parsedmodel) {
+  lps <- map(parsedmodel$class_terms, build_linear_predictor)
+  expr_softmax(lps, parsedmodel$classes)
+}
+
+#' @export
+tidypredict_fit.pm_multiclass_regression <- function(model) {
+  build_fit_formula_multinom(model)
 }
 
 # For {orbital}
@@ -128,22 +175,14 @@ parse_model_glmnet <- function(model, call = rlang::caller_env()) {
   paste(terms, collapse = " + ")
 }
 
-#' Extract multiclass linear predictors for glmnet models
-#'
-#' For use in orbital package.
-#' @param model A glmnet model object with class "multnet"
-#' @param penalty The penalty value to use for coefficient extraction
-#' @keywords internal
+# Extractors --------------------------------------------------
+
 #' @export
-.extract_glmnet_multiclass <- function(model, penalty = NULL) {
-  if (!inherits(model, "multnet")) {
-    cli::cli_abort(
-      "{.arg model} must be {.cls multnet}, not {.obj_type_friendly {model}}."
-    )
-  }
+tidypredict_class_exprs.multnet <- function(x, ..., penalty = NULL) {
+  rlang::check_dots_empty()
 
   if (is.null(penalty)) {
-    if (length(model$lambda) != 1) {
+    if (length(x$lambda) != 1) {
       cli::cli_abort(
         c(
           "glmnet model has multiple penalty values.",
@@ -151,20 +190,34 @@ parse_model_glmnet <- function(model, call = rlang::caller_env()) {
         )
       )
     }
-    penalty <- model$lambda
+    penalty <- x$lambda
   }
 
   # Get coefficients for each class at the specified penalty
-  coefs_list <- stats::coef(model, s = penalty)
+  coefs_list <- stats::coef(x, s = penalty)
   class_names <- names(coefs_list)
 
   # Build linear predictor expression for each class
   eqs <- lapply(coefs_list, function(coef_mat) {
     coef_names <- rownames(coef_mat)
     coef_values <- as.numeric(coef_mat)
-    .build_linear_pred(coef_names, coef_values)
+    # .build_linear_pred() returns a string; the generic promises a language
+    # object. A model with every coefficient zero gives "0", which parses to a
+    # bare numeric, consistent with how stumps are returned elsewhere.
+    str2lang(.build_linear_pred(coef_names, coef_values))
   })
 
   names(eqs) <- class_names
   eqs
+}
+
+# Output metadata ---------------------------------
+
+# A `multnet` fit parses to a multiclass parsed model, which carries its own
+# levels. A binary `lognet` parses to a single logistic expression, so its
+# levels only exist on the fitted object.
+#' @export
+tidypredict_outcome_levels.lognet <- function(x, ...) {
+  rlang::check_dots_empty()
+  as.character(x$classnames)
 }

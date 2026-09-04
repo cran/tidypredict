@@ -1,0 +1,216 @@
+test_that("cforest regression predictions match", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 20)
+
+  expect_type(tidypredict_fit(model), "language")
+  expect_false(tidypredict_test(model, df = mtcars)$alert)
+})
+
+test_that("gettree() is reached without tripping partykit's method shim", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 2)
+
+  # partykit 1.3-0's shim errors if the generic is called as
+  # `partykit::gettree()`, and warns if it is reached under any name other than
+  # `gettree`. Assert both: no condition of either kind.
+  expect_no_error(cforest_gettree(model, 1))
+  expect_no_warning(cforest_gettree(model, 1))
+  expect_s3_class(cforest_gettree(model, 1), "party")
+
+  expect_no_warning(tidypredict_fit(model))
+  expect_no_warning(parse_model(model))
+})
+
+test_that("terminal nodes use in-bag weighted means, not unweighted means", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 20)
+
+  y <- mtcars$mpg
+  node_train <- predict(model, type = "node")
+  node_new <- predict(model, newdata = mtcars, type = "node")
+
+  weighted <- rep(0, nrow(mtcars))
+  unweighted <- rep(0, nrow(mtcars))
+  for (i in seq_along(model$nodes)) {
+    w <- model$weights[[i]]
+    wm <- tapply(w * y, node_train[[i]], sum) / tapply(w, node_train[[i]], sum)
+    um <- tapply(y, node_train[[i]], mean)
+    key <- as.character(node_new[[i]])
+    weighted <- weighted + wm[key]
+    unweighted <- unweighted + um[key]
+  }
+  weighted <- weighted / length(model$nodes)
+  unweighted <- unweighted / length(model$nodes)
+
+  fit <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+
+  # tidypredict must match the in-bag weighted average, which is what predict()
+  # returns, and must differ from the naive unweighted average.
+  expect_equal(fit, as.numeric(weighted))
+  expect_equal(
+    fit,
+    as.numeric(predict(model, newdata = mtcars, type = "response"))
+  )
+  expect_gt(max(abs(as.numeric(unweighted) - fit)), 1e-6)
+})
+
+test_that("cforest works with categorical predictors", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + factor(cyl), data = mtcars, ntree = 20)
+
+  expect_false(tidypredict_test(model, df = mtcars)$alert)
+})
+
+test_that("cforest supports SQL", {
+  skip_if_not_installed("dbplyr")
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 10)
+
+  expect_s3_class(tidypredict_sql(model, dbplyr::simulate_dbi()), "sql")
+})
+
+test_that("parse_model roundtrips and produces correct predictions", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 10)
+
+  pm <- parse_model(model)
+  expect_s3_class(pm, "pm_tree")
+  expect_equal(pm$general$model, "cforest")
+  expect_identical(tidypredict_fit(pm), tidypredict_fit(model))
+
+  base <- as.numeric(predict(model, newdata = mtcars, type = "response"))
+  parsed <- rlang::eval_tidy(tidypredict_fit(pm), mtcars)
+  expect_equal(parsed, base)
+})
+
+test_that("model can be saved and re-loaded", {
+  skip_if_not_installed("partykit")
+  skip_if_not_installed("yaml")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + cyl, data = mtcars, ntree = 10)
+
+  tmp <- withr::local_tempfile(fileext = ".yml")
+  yaml::write_yaml(parse_model(model), tmp)
+  reloaded <- as_parsed_model(yaml::read_yaml(tmp))
+
+  base <- as.numeric(predict(model, newdata = mtcars, type = "response"))
+  parsed <- rlang::eval_tidy(tidypredict_fit(reloaded), mtcars)
+  expect_equal(parsed, base, tolerance = 1e-6)
+})
+
+test_that("classification errors with clear message", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(Species ~ ., data = iris, ntree = 5)
+
+  expect_snapshot(error = TRUE, tidypredict_fit(model))
+  expect_snapshot(error = TRUE, parse_model(model))
+})
+
+test_that("awkward factor level names match predict()", {
+  skip_if_not_installed("partykit")
+
+  # An unused level, a level holding a `:`, and a level whose name is also a
+  # column in the data all break a parser that splits level names by hand.
+  set.seed(1)
+  df <- mtcars
+  df$g <- factor(
+    c("a:b", "wt", "c d")[df$cyl / 2 - 1],
+    levels = c("a:b", "wt", "c d", "unused")
+  )
+  model <- partykit::cforest(mpg ~ g + wt, data = df, ntree = 20)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    as.numeric(predict(model, newdata = df, type = "response"))
+  )
+})
+
+test_that("ordered factor predictors match predict()", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  df <- transform(mtcars, gear = factor(gear, ordered = TRUE))
+  model <- partykit::cforest(mpg ~ gear + wt, data = df, ntree = 20)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    as.numeric(predict(model, newdata = df, type = "response"))
+  )
+})
+
+test_that("a forest of stumps matches predict()", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(
+    mpg ~ wt + cyl,
+    data = mtcars,
+    ntree = 10,
+    control = partykit::ctree_control(mincriterion = 0.99999999)
+  )
+
+  # Every tree is root-only, so the forest averages ten scalars into one.
+  fit <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+  expect_length(fit, 1)
+  expect_equal(
+    rep(fit, nrow(mtcars)),
+    as.numeric(predict(model, newdata = mtcars, type = "response"))
+  )
+})
+
+test_that("a constant outcome matches predict()", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  df <- transform(mtcars, const = 5)
+  model <- partykit::cforest(const ~ wt + cyl, data = df, ntree = 10)
+
+  fit <- rlang::eval_tidy(tidypredict_fit(model), df)
+  expect_length(fit, 1)
+  expect_equal(
+    rep(fit, nrow(df)),
+    as.numeric(predict(model, newdata = df, type = "response"))
+  )
+})
+
+test_that("training data containing NA has no stable reference", {
+  skip_if_not_installed("partykit")
+  skip(paste(
+    "`cforest()` resolves a training row's missing split value by sampling,",
+    "so `predict()` returns a different answer on each call even for complete",
+    "newdata. There is no value to assert against."
+  ))
+})
+
+test_that("a missing predictor gives NA rather than a random draw (#294)", {
+  skip_if_not_installed("partykit")
+
+  set.seed(1)
+  model <- partykit::cforest(mpg ~ wt + disp + cyl, data = mtcars, ntree = 20)
+
+  df <- mtcars
+  df$wt[1:4] <- NA_real_
+  fit <- rlang::eval_tidy(tidypredict_fit(model), df)
+
+  expect_length(fit, nrow(df))
+  expect_true(all(is.na(fit[1:4])))
+  expect_equal(
+    fit[-(1:4)],
+    as.numeric(predict(model, mtcars))[-(1:4)]
+  )
+})

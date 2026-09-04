@@ -4,13 +4,17 @@
 \alias{build_nested_node}
 \title{Build a nested case_when expression for a single node}
 \usage{
-build_nested_node(node_id, tree_info)
+build_nested_node(node_id, tree_info, missing = "default")
 }
 \arguments{
 \item{node_id}{The node ID to build (0-indexed)}
 
 \item{tree_info}{Tree info list with nodeID, leftChild, rightChild,
 splitvarName, terminal, prediction, and node_splits}
+
+\item{missing}{What a row missing this split's column should do:
+\code{"default"} takes the \code{.default} branch, \code{"na"} returns \code{NA}, and
+\code{"left"} takes the left branch.}
 }
 \description{
 Build a nested case_when expression for a single node

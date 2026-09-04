@@ -53,13 +53,22 @@ generate_case_when_trees <- function(parsedmodel, default = TRUE) {
   map(
     parsedmodel$trees,
     generate_case_when_tree,
-    mode = parsedmodel$general$mode,
+    # `[[` rather than `$`, so a parsed model without a `mode` field (ranger
+    # and randomForest) does not partial match `general$model`.
+    mode = parsedmodel$general[["mode"]] %||% "",
     default = default
   )
 }
 
 generate_case_when_tree <- function(tree, mode, default = TRUE) {
   nodes <- generate_tree_nodes(tree, mode)
+
+  # A stump has a single node with no conditions, for which
+  # `generate_tree_node()` returns a bare prediction rather than a formula.
+  # There is nothing to turn into a `case_when()`.
+  if (length(tree) == 1 && isTRUE(path_formulas(tree[[1]]$path))) {
+    return(nodes[[1]])
+  }
 
   if (default) {
     default <- nodes[[length(nodes)]]
@@ -109,13 +118,17 @@ generate_tree_nodes <- function(tree, mode) {
 #'   used then `is_intercept == 1`.
 #' - `is_intercept`integer, takes values `0` and `1`.`
 #'
-#'  @keywords internal
+#' @keywords internal
 generate_tree_node <- function(node, calc_mode = "") {
   path <- node$path
   prediction <- node$prediction
   rcl <- path_formulas(path)
 
-  if (length(prediction) > 1) {
+  # A linear prediction is a list of terms, of any length. The branch is taken
+  # on the shape of the first element rather than on the number of terms, so
+  # that a single term is summed the same way as several, whether or not it is
+  # the intercept.
+  if (is.list(prediction) && is.list(prediction[[1]])) {
     pl <- map(
       prediction,
       ~ {
@@ -138,13 +151,14 @@ generate_tree_node <- function(node, calc_mode = "") {
       }
     )
     pl <- purrr::discard(pl, is.null)
-    pl <- reduce_addition(pl)
+    # Every term dropped out, which happens when they are all zero. The sum of
+    # no terms is zero; `reduce_addition()` would abort on the empty list.
+    pl <- if (length(pl) == 0) 0 else reduce_addition(pl)
   } else {
-    if (is.list(prediction) && prediction[[1]]$is_intercept) {
-      prediction <- prediction[[1]]$val
-    }
     pl <- prediction
   }
+
+  pl <- clamp_prediction(pl, node$limits)
 
   if (isTRUE(rcl)) {
     return(pl)
@@ -155,6 +169,24 @@ generate_tree_node <- function(node, calc_mode = "") {
   }
 
   expr(!!rcl ~ !!pl)
+}
+
+# Hold a node's prediction to `limits`, when the model records any.
+#
+# A constant prediction is clamped here rather than in the expression, so that
+# a model with no linear terms keeps a formula of plain numbers.
+clamp_prediction <- function(pl, limits) {
+  if (is.null(limits)) {
+    return(pl)
+  }
+  if (is.numeric(pl)) {
+    return(min(max(pl, limits[[1]]), limits[[2]]))
+  }
+  # SQL's `GREATEST`/`LEAST` always drop nulls, so `na.rm = TRUE` is what the
+  # translation does either way; stating it keeps the R and SQL results the
+  # same and stops dbplyr warning about the difference.
+  lower <- expr(pmax(!!pl, !!limits[[1]], na.rm = TRUE))
+  expr(pmin(!!lower, !!limits[[2]], na.rm = TRUE))
 }
 
 #' Turn a path object into a combined expression
@@ -172,13 +204,18 @@ generate_tree_node <- function(node, calc_mode = "") {
 #' - `col` character.
 #' - `val` if `type == "conditional"` and `vals` if `type == "set"`.
 #'   Can be character or numeric.
-#'  @keywords internal
+#' @keywords internal
 path_formulas <- function(path) {
   if (length(path) == 0) {
     return(TRUE)
   }
 
-  if (length(path) == 1 && path[[1]]$type == "all") {
+  # `"all"` matches every row, so it contributes nothing to the condition. It
+  # is dropped here rather than reduced in as a `TRUE` term, so that a path made
+  # up only of `"all"` elements is still recognized as unconditional.
+  path <- purrr::discard(path, \(x) identical(x$type, "all"))
+
+  if (length(path) == 0) {
     return(TRUE)
   }
 
@@ -201,7 +238,7 @@ path_formulas <- function(path) {
 #' - `col` character.
 #' - `val` if `type == "conditional"` and `vals` if `type == "set"`.
 #'   Can be character or numeric.
-#'  @keywords internal
+#' @keywords internal
 path_formula <- function(x) {
   type <- x$type
 
@@ -209,6 +246,20 @@ path_formula <- function(x) {
     i <- build_comparison_expr(x$col, x$val, x$op)
   } else if (type == "set") {
     i <- build_set_expr(x$col, x$vals, x$op)
+  } else if (
+    type == "conditional_with_surrogates" || type == "set_with_surrogates"
+  ) {
+    i <- build_surrogate_condition(x)
+  } else if (type == "na_check") {
+    i <- expr(is.na(!!as.name(x$col)))
+  } else if (type == "conditional_not_na") {
+    col <- as.name(x$col)
+    cond <- build_comparison_expr(x$col, x$val, x$op)
+    i <- expr(!is.na(!!col) & !!cond)
+  } else if (type == "set_not_na") {
+    col <- as.name(x$col)
+    cond <- build_set_expr(x$col, x$vals, x$op)
+    i <- expr(!is.na(!!col) & !!cond)
   } else {
     cli::cli_abort(
       "{.field type} has unsupported value of {.value {x$type}}.",
@@ -253,6 +304,55 @@ build_set_expr <- function(col, vals, op) {
   }
 }
 
+# Build condition with surrogate fallbacks for rpart. Only version 1/2 parsed
+# models use this; version 3 rpart models encode surrogates differently.
+#
+# Structure of x:
+# - primary: list(col, val, op) or list(col, vals, op) for sets
+# - surrogates: list of lists, each with (col, val, op) or (col, vals, op)
+# - majority_match: logical, TRUE if all-NA case should match this direction
+build_surrogate_condition <- function(x) {
+  primary <- x$primary
+  surrogates <- x$surrogates
+  majority_match <- x$majority_match
+
+  primary_col <- as.name(primary$col)
+  primary_cond <- build_single_condition(primary)
+  primary_expr <- expr(!is.na(!!primary_col) & !!primary_cond)
+
+  all_terms <- list(primary_expr)
+
+  # Track NA checks for each level, a surrogate is only used when every
+  # variable before it is missing.
+  na_checks <- list(expr(is.na(!!primary_col)))
+
+  for (surr in surrogates) {
+    surr_col <- as.name(surr$col)
+    surr_cond <- build_single_condition(surr)
+
+    prev_na <- reduce_and(na_checks)
+    surr_expr <- expr(!!prev_na & !is.na(!!surr_col) & !!surr_cond)
+
+    all_terms <- c(all_terms, list(surr_expr))
+    na_checks <- c(na_checks, list(expr(is.na(!!surr_col))))
+  }
+
+  if (isTRUE(majority_match)) {
+    all_terms <- c(all_terms, list(reduce_and(na_checks)))
+  }
+
+  reduce_or(all_terms)
+}
+
+# Build a single condition expression (without NA check)
+build_single_condition <- function(cond) {
+  if (!is.null(cond$vals)) {
+    build_set_expr(cond$col, cond$vals, cond$op)
+  } else {
+    build_comparison_expr(cond$col, cond$val, cond$op)
+  }
+}
+
 # For {orbital}
 #' Build case_when expression from nodes with predictions and paths
 #'
@@ -271,8 +371,10 @@ build_set_expr <- function(col, vals, op) {
     expr(!!rcl ~ !!node$prediction)
   })
 
-  # Handle stump trees (single node with no conditions)
-  if (length(node_exprs) == 1 && is.numeric(node_exprs[[1]])) {
+  # Handle stump trees (single node with no conditions). The prediction can be
+  # a class label as well as a number, so test for the absence of a condition
+  # rather than for a numeric prediction.
+  if (length(node_exprs) == 1 && !rlang::is_formula(node_exprs[[1]])) {
     return(node_exprs[[1]])
   }
 

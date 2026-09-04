@@ -9,8 +9,24 @@ lgb_identity_objectives <- c(
   "quantile",
   "mape"
 )
+# How close to zero LightGBM's `IsZero()` counts as zero, from
+# `kZeroAsMissingValueRange`.
+lgb_zero_threshold <- 1e-35
+
 lgb_exp_objectives <- c("poisson", "gamma", "tweedie")
 lgb_sigmoid_objectives <- c("binary", "cross_entropy")
+# `reg_sqrt` trains on `sqrt(|y|)` keeping the sign, so `ConvertOutput` squares
+# the raw score back onto the response scale. Every identity objective takes the
+# parameter, but `huber` does not act on it: its predictions stay on the raw
+# scale whatever `reg_sqrt` says. Verified against `predict()` for all six.
+lgb_reg_sqrt_objectives <- c(
+  "regression",
+  "regression_l2",
+  "regression_l1",
+  "fair",
+  "quantile",
+  "mape"
+)
 lgb_multiclass_objectives <- c("multiclass", "multiclassova")
 lgb_supported_objectives <- c(
   lgb_identity_objectives,
@@ -161,6 +177,8 @@ parse_lgb_linear_leaves <- function(
 get_lgb_trees <- function(model, linear_info = list()) {
   trees_df <- lightgbm::lgb.model.dt.tree(model)
   trees_df <- as.data.frame(trees_df)
+  trees_df <- add_lgb_missing_type(trees_df, model)
+  trees_df <- add_lgb_stump_trees(trees_df, model)
 
   # Check for unsupported decision types
   decision_types <- unique(trees_df$decision_type[
@@ -188,6 +206,114 @@ get_lgb_trees <- function(model, linear_info = list()) {
     tree_linear <- linear_info[[tree_idx]]
     get_lgb_tree(trees_split[[tree_idx]], tree_linear)
   })
+}
+
+# Add the `missing_type` of each split node to `trees_df`.
+#
+# `lgb.model.dt.tree()` does not report it, and it decides how a missing value
+# is routed, so it has to be read from the JSON dump and joined on by tree and
+# split index.
+add_lgb_missing_type <- function(trees_df, model) {
+  dump <- jsonlite::fromJSON(model$dump_model(), simplifyVector = FALSE)
+
+  keys <- character(0)
+  types <- character(0)
+  collect <- function(node, tree_index) {
+    if (is.null(node$split_index)) {
+      return(invisible())
+    }
+    keys <<- c(keys, paste(tree_index, node$split_index))
+    types <<- c(types, node$missing_type %||% "None")
+    collect(node$left_child, tree_index)
+    collect(node$right_child, tree_index)
+  }
+  for (tree in dump$tree_info) {
+    collect(tree$tree_structure, tree$tree_index)
+  }
+
+  lookup <- stats::setNames(types, keys)
+  trees_df$missing_type <- unname(
+    lookup[paste(trees_df$tree_index, trees_df$split_index)]
+  )
+  trees_df
+}
+
+# Add back the trees that `lgb.model.dt.tree()` drops.
+#
+# When LightGBM cannot make a split it emits a tree that is a bare leaf, and
+# `lgb.model.dt.tree()` reports no rows at all for such a tree. The leaf value
+# is still in the JSON dump, so each dropped tree is rebuilt here as the single
+# leaf row the rest of the parser expects. If no split is ever possible
+# LightGBM halts after one iteration and every tree is a stump, leaving
+# `trees_df` empty.
+#
+# Restoring the trees is also what keeps a multiclass model correct, which is a
+# separate concern from the empty-`trees_df` one and is easy to lose sight of.
+# A multiclass fit assigns trees to classes positionally, so a dropped tree
+# shifts every class after the gap. That needs only one absent class, which is
+# ordinary in imbalanced or filtered data, and it is silent: the probabilities
+# still sum to 1. Restoring the trees closes the gap and the positional
+# assignment is right again. Anyone reworking this must keep that property:
+# if the dropped trees are no longer restored, the class assignment has to be
+# made `tree_index`-aware instead, or the defect returns unnoticed. (#419)
+add_lgb_stump_trees <- function(trees_df, model) {
+  dump <- jsonlite::fromJSON(model$dump_model(), simplifyVector = FALSE)
+
+  stumps <- Filter(
+    \(tree) is.null(tree$tree_structure$split_index),
+    dump$tree_info
+  )
+  if (length(stumps) == 0) {
+    return(trees_df)
+  }
+
+  rows <- map(stumps, function(tree) {
+    row <- trees_df[NA_integer_, , drop = FALSE]
+    row$tree_index <- as.integer(tree$tree_index)
+    row$depth <- 0L
+    row$leaf_index <- 0L
+    row$leaf_value <- as.numeric(tree$tree_structure$leaf_value)
+    row$leaf_count <- as.integer(tree$tree_structure$leaf_count)
+    row
+  })
+
+  trees_df <- do.call(rbind, c(list(trees_df), rows))
+  trees_df <- trees_df[order(trees_df$tree_index), , drop = FALSE]
+  rownames(trees_df) <- NULL
+  trees_df
+}
+
+# The left branch of a numerical split, `col <= val`, with the values
+# `missing_type` sends this way folded in.
+#
+# `Tree::NumericalDecision` consults `default_left` only when the node's
+# `missing_type` is `NaN` or `Zero`. Under `None`, which is what a feature with
+# no missing value in the training data gets, a missing value is coerced to `0`
+# and compared against the threshold like any other, so it goes wherever `0`
+# goes. `Zero` treats an exact zero as missing as well.
+lgb_numeric_left <- function(col, val, missing_type, default_left) {
+  col <- rlang::sym(col)
+  val <- as.numeric(val)
+  missing_type <- missing_type %||% "NaN"
+
+  if (missing_type == "None") {
+    if (0 <= val) {
+      return(expr(is.na(!!col) | !!col <= !!val))
+    }
+    return(expr(!is.na(!!col) & !!col <= !!val))
+  }
+
+  is_missing <- if (missing_type == "Zero") {
+    expr(is.na(!!col) | abs(!!col) <= !!lgb_zero_threshold)
+  } else {
+    expr(is.na(!!col))
+  }
+
+  if (default_left) {
+    expr(!!is_missing | !!col <= !!val)
+  } else {
+    expr(!(!!is_missing) & !!col <= !!val)
+  }
 }
 
 get_lgb_children_map <- function(tree_df) {
@@ -218,6 +344,7 @@ get_lgb_tree <- function(tree_df, linear_info = NULL) {
   default_left <- tree_df$default_left == "TRUE"
   split_feature <- tree_df$split_feature
   threshold <- tree_df$threshold
+  missing_type <- tree_df$missing_type
 
   # Build split_index to row lookup (avoid repeated which() calls)
   max_split_idx <- suppressWarnings(max(split_index, na.rm = TRUE))
@@ -260,7 +387,8 @@ get_lgb_tree <- function(tree_df, linear_info = NULL) {
           default_left,
           split_feature,
           threshold,
-          children_map
+          children_map,
+          missing_type
         )
       )
     } else {
@@ -276,7 +404,8 @@ get_lgb_tree <- function(tree_df, linear_info = NULL) {
           default_left,
           split_feature,
           threshold,
-          children_map
+          children_map,
+          missing_type
         )
       )
     }
@@ -293,7 +422,8 @@ get_lgb_path_fast <- function(
   default_left,
   split_feature,
   threshold,
-  children_map
+  children_map,
+  missing_type
 ) {
   path <- list()
   current_row <- leaf_row
@@ -326,26 +456,25 @@ get_lgb_path_fast <- function(
         col = split_feature[parent_row],
         val = threshold[parent_row],
         op = op,
-        missing = missing_with_us
+        missing = missing_with_us,
+        missing_type = missing_type[parent_row],
+        default_left = def_left
       )
     } else if (dec_type == "==") {
       # Categorical split: threshold is "0||1||3" format
+      check_lgb_categorical_default_left(def_left)
       category_set <- parse_lgb_categorical_threshold(threshold[parent_row])
 
-      if (is_left_child) {
-        op <- "in"
-        missing_with_us <- def_left
-      } else {
-        op <- "not-in"
-        missing_with_us <- !def_left
-      }
+      # A missing value always goes right, so it is never carried with the
+      # left branch.
+      op <- if (is_left_child) "in" else "not-in"
 
       condition <- list(
         type = "set",
         col = split_feature[parent_row],
         vals = category_set,
         op = op,
-        missing = missing_with_us
+        missing = FALSE
       )
     }
 
@@ -364,16 +493,57 @@ parse_lgb_categorical_threshold <- function(threshold) {
   as.integer(strsplit(threshold, "[|][|]")[[1]])
 }
 
+# `Tree::CategoricalDecision` sends a missing value, and any negative value,
+# right whatever `default_left` says, and `Tree::SplitCategorical` never sets
+# the bit in the first place, so a categorical split with `default_left` set is
+# a state LightGBM does not produce. Nothing here could route it correctly, so
+# it is refused rather than silently mishandled.
+check_lgb_categorical_default_left <- function(default_left) {
+  if (isTRUE(default_left)) {
+    cli::cli_abort(
+      "A categorical split cannot set {.field default_left}.",
+      .internal = TRUE
+    )
+  }
+  invisible(NULL)
+}
+
 # Shared helpers -----------------------------------------------
 
-# Helper for sigmoid transformation
-lgb_sigmoid <- function(f) {
-  expr(1 / (1 + exp(-(!!f))))
+# Helper for sigmoid transformation.
+#
+# LightGBM's `binary`, `cross_entropy` and `multiclassova` objectives apply
+# `1 / (1 + exp(-sigmoid * x))`, where `sigmoid` is a fit parameter defaulting
+# to 1. Fixing it at 1 rescales every probability of a model fit with any other
+# value.
+# The `sigmoid` scaling an objective actually applies.
+#
+# Not every objective that ends in a logistic honours it. `binary` and
+# `multiclassova` do; `cross_entropy` ignores it and is always plain
+# `1 / (1 + exp(-x))`, whatever `sigmoid` was set to. Verified against
+# `predict()` at sigmoid 1, 2 and 3.
+lgb_sigmoid_param <- function(objective, params) {
+  if (identical(objective, "cross_entropy")) {
+    return(1)
+  }
+  params$sigmoid %||% 1
+}
+
+lgb_sigmoid <- function(f, sigmoid = 1) {
+  if (identical(sigmoid, 1) || identical(sigmoid, 1L)) {
+    return(expr_logistic(f))
+  }
+  expr_logistic(expr(!!sigmoid * !!f))
 }
 
 # Apply multiclass transformation to tree expressions
 # Shared by nested and from_parsed multiclass builders
-apply_lgb_multiclass_transformation <- function(trees, num_class, objective) {
+apply_lgb_multiclass_transformation <- function(
+  trees,
+  num_class,
+  objective,
+  sigmoid = 1
+) {
   n_trees <- length(trees)
 
   # Group trees by class: tree i belongs to class (i-1) %% num_class
@@ -388,15 +558,10 @@ apply_lgb_multiclass_transformation <- function(trees, num_class, objective) {
 
   # Apply transformation based on objective
   if (objective == "multiclass") {
-    # Softmax: exp(raw_i) / sum(exp(raw_j))
-    exp_raws <- map(raw_scores, ~ expr(exp(!!.x)))
-    denom <- reduce_addition(exp_raws)
-    result <- map(seq_len(num_class), function(i) {
-      expr(exp(!!raw_scores[[i]]) / (!!denom))
-    })
+    result <- expr_softmax(raw_scores)
   } else if (objective == "multiclassova") {
     # One-vs-all: sigmoid for each class independently
-    result <- map(raw_scores, lgb_sigmoid)
+    result <- map(raw_scores, \(score) lgb_sigmoid(score, sigmoid))
   }
 
   names(result) <- paste0("class_", seq_len(num_class) - 1)
@@ -430,31 +595,48 @@ build_lgb_linear_prediction <- function(linear) {
     feat <- as.name(fn)
     expr(is.na(!!feat))
   })
-  any_na <- if (length(na_checks) == 1) {
-    na_checks[[1]]
-  } else {
-    reduce_or(na_checks)
-  }
+  any_na <- reduce_or(na_checks)
 
   # If any feature is NA, use fallback; otherwise use linear formula
   expr(ifelse(!!any_na, !!fallback, !!linear_formula))
 }
 
-# Apply lightgbm objective transformation to formula
-apply_lgb_objective <- function(f, objective, params) {
-  # RF boosting averages trees instead of summing
-  boosting <- params$boosting
-  if (!is.null(boosting) && boosting == "rf") {
-    # f is already averaged by caller
+# A leaf of a linear tree stores its coefficients under `linear` and leaves
+# `prediction` empty, so the parsed path has to turn that back into an
+# expression before the shared tree builder reads `prediction`. Saving and
+# loading a parsed model can turn the numeric vectors into lists, so they are
+# flattened here.
+resolve_lgb_leaf_prediction <- function(leaf) {
+  linear <- leaf$linear
+
+  if (is.null(linear)) {
+    if (is.null(leaf$prediction)) {
+      cli::cli_abort("Leaf has no prediction.", .internal = TRUE)
+    }
+    return(leaf)
   }
 
-  # Apply transformation
+  linear$intercept <- unlist(linear$intercept)
+  linear$fallback <- unlist(linear$fallback)
+  linear$feature_names <- as.character(unlist(linear$feature_names))
+  linear$coefficients <- as.numeric(unlist(linear$coefficients))
+
+  leaf$prediction <- build_lgb_linear_prediction(linear)
+  leaf
+}
+
+# Apply lightgbm objective transformation to formula
+apply_lgb_objective <- function(f, objective, params) {
   if (objective %in% lgb_exp_objectives) {
     return(expr(exp(!!f)))
   }
 
   if (objective %in% lgb_sigmoid_objectives) {
-    return(lgb_sigmoid(f))
+    return(lgb_sigmoid(f, lgb_sigmoid_param(objective, params)))
+  }
+
+  if (objective %in% lgb_reg_sqrt_objectives && isTRUE(params$reg_sqrt)) {
+    return(expr(sign(!!f) * (!!f)^2))
   }
 
   # Identity objectives - return as-is
@@ -471,66 +653,43 @@ tidypredict_fit.lgb.Booster <- function(model, ...) {
 
 # Nested formula builder for lightgbm (from model directly)
 build_fit_formula_lgb_nested <- function(parsedmodel, model) {
-  n_trees <- length(parsedmodel$trees)
-
-  if (n_trees == 0) {
-    cli::cli_abort("Model has no trees.")
-  }
-
-  objective <- parsedmodel$general$params$objective %||% "regression"
-
-  if (!objective %in% lgb_supported_objectives) {
-    cli::cli_abort(
-      c(
-        "Unsupported objective: {.val {objective}}.",
-        "i" = "Supported objectives: {.val {lgb_supported_objectives}}."
-      )
-    )
-  }
-
-  if (objective %in% lgb_multiclass_objectives) {
-    return(build_fit_formula_lgb_multiclass_nested(
-      parsedmodel,
-      model,
-      objective
-    ))
-  }
-
-  # Extract nested trees (pass feature_names to avoid redundant JSON parsing)
-  trees <- extract_lgb_trees_nested(model, parsedmodel$general$feature_names)
-
-  # RF boosting averages trees instead of summing
-  boosting <- parsedmodel$general$params$boosting
-  if (!is.null(boosting) && boosting == "rf") {
-    f <- reduce_addition(trees)
-    f <- expr_division(f, n_trees)
-  } else {
-    f <- reduce_addition(trees)
-  }
-
-  apply_lgb_objective(f, objective, parsedmodel$general$params)
-}
-
-build_fit_formula_lgb_multiclass_nested <- function(
-  parsedmodel,
-  model,
-  objective
-) {
-  num_class <- parsedmodel$general$num_class
-
-  trees <- extract_lgb_trees_nested(model, parsedmodel$general$feature_names)
-  apply_lgb_multiclass_transformation(trees, num_class, objective)
+  assemble_lgb_formula(parsedmodel, function() {
+    # Pass feature_names to avoid redundant JSON parsing
+    extract_lgb_trees_nested(model, parsedmodel$general$feature_names)
+  })
 }
 
 # Nested formula builder for lightgbm (from parsed model, version 3)
 build_fit_formula_lgb_from_parsed <- function(parsedmodel) {
+  assemble_lgb_formula(parsedmodel, function() {
+    map(parsedmodel$trees, function(tree) {
+      build_nested_from_flat_paths(
+        map(tree, resolve_lgb_leaf_prediction),
+        build_lgb_nested_condition,
+        lgb_is_left_op
+      )
+    })
+  })
+}
+
+# Only the source of the trees differs between a fitted model and a parsed one,
+# so `build_trees` supplies them and everything else is shared. It is a function
+# rather than a value so that the objective is validated before the trees are
+# built.
+assemble_lgb_formula <- function(parsedmodel, build_trees) {
   n_trees <- length(parsedmodel$trees)
 
   if (n_trees == 0) {
     cli::cli_abort("Model has no trees.")
   }
 
-  objective <- parsedmodel$general$params$objective %||% "regression"
+  lgb_check_objective(parsedmodel)
+
+  lgb_combine(build_trees(), parsedmodel)
+}
+
+lgb_check_objective <- function(parsedmodel) {
+  objective <- lgb_parsed_objective(parsedmodel)
 
   if (!objective %in% lgb_supported_objectives) {
     cli::cli_abort(
@@ -541,63 +700,72 @@ build_fit_formula_lgb_from_parsed <- function(parsedmodel) {
     )
   }
 
-  if (objective %in% lgb_multiclass_objectives) {
-    return(build_fit_formula_lgb_multiclass_from_parsed(parsedmodel, objective))
+  invisible(parsedmodel)
+}
+
+# Combine per-tree expressions into the booster's prediction: an additive sum
+# (averaged instead when boosting is random forest), then the objective's
+# inverse link. A multiclass model instead groups the trees by class and
+# returns one expression per class, which is not a single language object.
+lgb_combine <- function(trees, parsedmodel) {
+  objective <- lgb_parsed_objective(parsedmodel)
+  n_trees <- length(trees)
+
+  # A model of stumps mentions no column, so anchor it to one. The feature
+  # names recorded at parse time are the columns `newdata` has to supply.
+  recycle <- function(f) {
+    expr_recycle_over_column(f, parsedmodel$general$feature_names)
   }
 
-  # Build nested trees from flat paths
-  trees <- map(parsedmodel$trees, function(tree) {
-    build_nested_from_flat_paths(tree, build_lgb_nested_condition)
-  })
+  if (objective %in% lgb_multiclass_objectives) {
+    num_class <- parsedmodel$general$num_class
+    if (is.null(num_class) || num_class < 2) {
+      cli::cli_abort("Multiclass model must have num_class >= 2.")
+    }
+    return(map(
+      apply_lgb_multiclass_transformation(
+        trees,
+        num_class,
+        objective,
+        parsedmodel$general$params$sigmoid %||% 1
+      ),
+      recycle
+    ))
+  }
+
+  f <- reduce_addition(trees)
 
   # RF boosting averages trees instead of summing
   boosting <- parsedmodel$general$params$boosting
   if (!is.null(boosting) && boosting == "rf") {
-    f <- reduce_addition(trees)
     f <- expr_division(f, n_trees)
-  } else {
-    f <- reduce_addition(trees)
   }
 
-  apply_lgb_objective(f, objective, parsedmodel$general$params)
-}
-
-build_fit_formula_lgb_multiclass_from_parsed <- function(
-  parsedmodel,
-  objective
-) {
-  num_class <- parsedmodel$general$num_class
-  if (is.null(num_class) || num_class < 2) {
-    cli::cli_abort("Multiclass model must have num_class >= 2.")
-  }
-
-  trees <- map(parsedmodel$trees, function(tree) {
-    build_nested_from_flat_paths(tree, build_lgb_nested_condition)
-  })
-  apply_lgb_multiclass_transformation(trees, num_class, objective)
+  recycle(apply_lgb_objective(f, objective, parsedmodel$general$params))
 }
 
 # Build condition for lightgbm nested generation from path element
+lgb_is_left_op <- function(op) {
+  op %in% c("less-equal", "in")
+}
+
 build_lgb_nested_condition <- function(path_elem) {
   col <- rlang::sym(path_elem$col)
   missing <- path_elem$missing %||% FALSE
 
   if (path_elem$type == "conditional") {
-    val <- as.numeric(path_elem$val)
-    # For nested generation, we only build the left condition (less-equal)
-    if (missing) {
-      expr(!!col <= !!val | is.na(!!col))
-    } else {
-      expr(!!col <= !!val)
-    }
+    # For nested generation, we only build the left condition (less-equal), so
+    # a model parsed before `missing_type` was recorded carries the same
+    # information in `missing`.
+    lgb_numeric_left(
+      path_elem$col,
+      path_elem$val,
+      path_elem$missing_type,
+      path_elem$default_left %||% missing
+    )
   } else if (path_elem$type == "set") {
     vals <- unlist(path_elem$vals)
-    # For nested generation, we only build the left condition (in)
-    if (missing) {
-      expr(!!col %in% !!vals | is.na(!!col))
-    } else {
-      expr(!!col %in% !!vals)
-    }
+    expr(!!col %in% !!vals)
   } else {
     cli::cli_abort("Unknown path element type: {.val {path_elem$type}}")
   }
@@ -612,6 +780,8 @@ extract_lgb_trees_nested <- function(
 ) {
   trees_df <- lightgbm::lgb.model.dt.tree(model)
   trees_df <- as.data.frame(trees_df)
+  trees_df <- add_lgb_missing_type(trees_df, model)
+  trees_df <- add_lgb_stump_trees(trees_df, model)
 
   # Extract linear tree info (only if not provided)
   if (is.null(feature_names)) {
@@ -714,21 +884,19 @@ build_nested_lgb_node <- function(
 
   if (decision_type == "<=") {
     # Numerical split: LEFT = (<= threshold), RIGHT = (> threshold)
-    if (default_left) {
-      # Missing goes left
-      condition <- expr(!!col_sym <= !!as.numeric(threshold) | is.na(!!col_sym))
-    } else {
-      # Missing goes right - condition is just <=
-      condition <- expr(!!col_sym <= !!as.numeric(threshold))
-    }
+    condition <- lgb_numeric_left(
+      col,
+      threshold,
+      tree_df$missing_type[[node_row]],
+      default_left
+    )
   } else if (decision_type == "==") {
-    # Categorical split: LEFT = (in set), RIGHT = (not in set)
+    # Categorical split: LEFT = (in set), RIGHT = (not in set).
+    #
+    # A missing value always goes right, which `%in%` does too.
+    check_lgb_categorical_default_left(default_left)
     category_set <- parse_lgb_categorical_threshold(threshold)
-    if (default_left) {
-      condition <- expr(!!col_sym %in% !!category_set | is.na(!!col_sym))
-    } else {
-      condition <- expr(!!col_sym %in% !!category_set)
-    }
+    condition <- expr(!!col_sym %in% !!category_set)
   } else {
     # nocov start
     cli::cli_abort(
@@ -741,20 +909,89 @@ build_nested_lgb_node <- function(
   expr(case_when(!!condition ~ !!left_subtree, .default = !!right_subtree))
 }
 
-# For {orbital} -----------------------------------------------
+# Extractors --------------------------------------------------
 
-#' Extract processed LightGBM trees
-#'
-#' For use in orbital package.
-#' @param model A LightGBM model object
-#' @keywords internal
 #' @export
-.extract_lgb_trees <- function(model) {
-  if (!inherits(model, "lgb.Booster")) {
+tidypredict_trees.lgb.Booster <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  extract_lgb_trees_nested(x)
+}
+
+#' @export
+tidypredict_combine_trees.lgb.Booster <- function(x, trees, ...) {
+  rlang::check_dots_empty()
+  check_trees_arg(trees)
+
+  parsedmodel <- parse_model(x)
+  lgb_check_objective(parsedmodel)
+
+  # A multiclass fit is one expression per class rather than one for the model,
+  # so there is no single language object to return. `tidypredict_trees()` does
+  # hand back the trees of such a model, and they are assigned to classes
+  # positionally, so a caller could otherwise sum trees belonging to different
+  # classes together.
+  if (lgb_parsed_objective(parsedmodel) %in% lgb_multiclass_objectives) {
     cli::cli_abort(
-      "{.arg model} must be {.cls lgb.Booster}, not {.obj_type_friendly {model}}."
+      c(
+        "Multiclass {.pkg lightgbm} trees cannot be combined into one
+         expression.",
+        i = "The fit is one expression per class.",
+        i = "Use {.fn tidypredict_fit} for the whole model instead."
+      ),
+      class = "tidypredict_no_combiner"
     )
   }
 
-  extract_lgb_trees_nested(model)
+  lgb_combine(trees, parsedmodel)
+}
+
+#' @export
+tidypredict_n_trees.lgb.Booster <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  # Counts what the extractor returns, which includes single-leaf trees:
+  # `lgb.model.dt.tree()` omits them but `add_lgb_stump_trees()` puts them
+  # back, deliberately, because multiclass class assignment is positional and a
+  # gap shifts every later class (#419).
+  length(tidypredict_trees(x))
+}
+
+# Output metadata ---------------------------------
+
+# The same objective groups `build_fit_formula_lgb()` switches on: the
+# multiclass objectives softmax one raw score per class, the sigmoid objectives
+# give a single binary probability, and the rest stay numeric.
+lgb_parsed_objective <- function(x) {
+  x$general$params$objective %||% "regression"
+}
+
+#' @export
+tidypredict_output_type.pm_lgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  objective <- lgb_parsed_objective(x)
+  if (objective %in% c(lgb_multiclass_objectives, lgb_sigmoid_objectives)) {
+    return("prob")
+  }
+  "numeric"
+}
+
+#' @export
+tidypredict_outcome_levels.pm_lgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  # LightGBM is fit on integer labels. The multiclass expressions come back
+  # named `class_0`, `class_1` and so on, which are positions, not levels.
+  NULL
+}
+
+#' @export
+tidypredict_normalized.pm_lgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  if (lgb_parsed_objective(x) %in% lgb_multiclass_objectives) {
+    return(TRUE)
+  }
+  NA
 }

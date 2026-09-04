@@ -347,7 +347,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li>Defaults to 0-to-1 predictions for <code>binomial</code> family
 models. That is akin to running
 <code>predict(model, type = &quot;response&quot;)</code></li>
-<li>Only <em>treatment</em> contrast (<code>contr.treatment</code>) are
+<li>Only <em>treatment</em> contrasts (<code>contr.treatment</code>) are
 supported.</li>
 <li><code>offset</code> is supported</li>
 <li>Categorical variables are supported</li>
@@ -363,6 +363,8 @@ supported</strong>:
 <li>Interval functions are not supported:
 <code>tidypredict_interval()</code> &amp;
 <code>tidypredict_sql_interval()</code></li>
+<li>The <code>probit</code> link is approximated rather than reproduced
+exactly. See <a href="#the-probit-link">The probit link</a>.</li>
 </ul>
 </div>
 <div id="how-it-works" class="section level2">
@@ -376,18 +378,18 @@ supported</strong>:
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">glm</span>(am <span class="sc">~</span> wt <span class="sc">+</span> char_cyl, <span class="at">data =</span> df, <span class="at">family =</span> <span class="st">&quot;binomial&quot;</span>)</span></code></pre></div>
 <p>It returns a SQL query that contains the coefficients
-(<code>model$coefficients</code>) operated against the correct variable
-or categorical variable value. In most cases the resulting SQL is one
-short <code>CASE WHEN</code> statement per coefficient. It appends the
+(<code>model</code>) evaluated against the correct variable or
+categorical variable value. In most cases the resulting SQL is one short
+<code>CASE WHEN</code> statement per coefficient. It appends the
 <code>offset</code> field or value, if one is provided.</p>
 <p>For <code>binomial</code> models, the <a href="https://en.wikipedia.org/wiki/Sigmoid_function">sigmoid</a>
 equation is applied. This means that the target SQL database type will
 need to support the exponent function.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidypredict)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_mssql</span>())</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 1.0 - 1.0 / (1.0 + EXP(((20.8527831345691 + ([wt] * -7.85934263583835)) + (CASE WHEN ([char_cyl] = &#39;cyl6&#39;) THEN 1.0 WHEN NOT ([char_cyl] = &#39;cyl6&#39;) THEN 0.0 </span><span class="re">END</span><span class="co"> * 3.10462643177452)) + (CASE WHEN ([char_cyl] = &#39;cyl8&#39;) THEN 1.0 WHEN NOT ([char_cyl] = &#39;cyl8&#39;) THEN 0.0 </span><span class="re">END</span><span class="co"> * 5.37942092366097)))</span></span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 1.0 / (1.0 + EXP(-(((20.8527831345691 + ([wt] * -7.85934263583835)) + (CASE WHEN ([char_cyl] = &#39;cyl6&#39;) THEN 1.0 WHEN NOT ([char_cyl] = &#39;cyl6&#39;) THEN 0.0 </span><span class="re">END</span><span class="co"> * 3.10462643177452)) + (CASE WHEN ([char_cyl] = &#39;cyl8&#39;) THEN 1.0 WHEN NOT ([char_cyl] = &#39;cyl8&#39;) THEN 0.0 </span><span class="re">END</span><span class="co"> * 5.37942092366097))))</span></span></code></pre></div>
 <p>Alternatively, use <code>tidypredict_to_column()</code> if the
-results are the be used or previewed in <code>dplyr</code>.</p>
+results are to be used or previewed in <code>dplyr</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>df <span class="sc">%&gt;%</span></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="fu">tidypredict_to_column</span>(model) <span class="sc">%&gt;%</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">10</span>)</span>
@@ -403,6 +405,45 @@ results are the be used or previewed in <code>dplyr</code>.</p>
 <span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; Merc 230          3.150     cyl4  0 0.01975984</span></span>
 <span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; Merc 280          3.440     cyl6  0 0.04399324</span></span></code></pre></div>
 </div>
+<div id="the-probit-link" class="section level2">
+<h2>The probit link</h2>
+<p>Every inverse link <code>tidypredict</code> writes is exact, with one
+exception: <code>probit</code>. The probit inverse link is the standard
+normal CDF, <code>pnorm()</code>, and no SQL backend has one, so it is
+written as the Bowling et al. logistic approximation instead:</p>
+<p><span class="math display">\[\frac{1}{1 + \exp(-0.07056\, x^3 -
+1.5976\, x)}\]</span></p>
+<p>The same expression is used on both the R and the SQL paths, so a
+probit model is the one place where <code>tidypredict_fit()</code> does
+not reproduce <code>predict()</code> to floating-point precision. The
+approximation’s error is about 0.014% of the probability, which works
+out to roughly 1e-4:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>probit_model <span class="ot">&lt;-</span> <span class="fu">glm</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  am <span class="sc">~</span> wt <span class="sc">+</span> mpg,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">data =</span> mtcars,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">family =</span> <span class="fu">binomial</span>(<span class="at">link =</span> <span class="st">&quot;probit&quot;</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">max</span>(<span class="fu">abs</span>(</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="fu">predict</span>(probit_model, mtcars, <span class="at">type =</span> <span class="st">&quot;response&quot;</span>) <span class="sc">-</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>    rlang<span class="sc">::</span><span class="fu">eval_tidy</span>(<span class="fu">tidypredict_fit</span>(probit_model), mtcars)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>))</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; [1] 0.0001389629</span></span></code></pre></div>
+<p>That is four orders of magnitude larger than the disagreement any
+other link produces, and larger than <code>tidypredict_test()</code>’s
+default threshold, so a probit model will be reported as failing:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(probit_model)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; Fitted records above the threshold: 31</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; Max difference: 0.000138962878328741</span></span></code></pre></div>
+<p>The difference is the approximation, not a defect in the parsed
+model. If the exact probabilities matter more than a portable formula,
+pass a threshold that reflects the approximation’s error, or use
+<code>predict()</code> directly.</p>
+</div>
 <div id="under-the-hood" class="section level2">
 <h2>Under the hood</h2>
 <p>The parser reads several parts of the <code>glm</code> object to
@@ -412,54 +453,88 @@ are not required for every parsed model. For example,
 <code>offset</code> is listed because it’s part of the formula (call) of
 the model, if there were no offset in a given model, that line would not
 exist.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>pm <span class="ot">&lt;-</span> <span class="fu">parse_model</span>(model)</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">str</span>(pm, <span class="dv">2</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; List of 2</span></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;  $ general:List of 7</span></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;   ..$ model   : chr &quot;glm&quot;</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;   ..$ residual: int 28</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;   ..$ family  : chr &quot;binomial&quot;</span></span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   ..$ link    : chr &quot;logit&quot;</span></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;   ..$ is_glm  : num 1</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;  $ terms  :List of 4</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>pm <span class="ot">&lt;-</span> <span class="fu">parse_model</span>(model)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">str</span>(pm, <span class="dv">2</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; List of 2</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;  $ general:List of 8</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;   ..$ model   : chr &quot;glm&quot;</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt;   ..$ version : num 2</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;   ..$ type    : chr &quot;regression&quot;</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;   ..$ residual: int 28</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;   ..$ sigma2  : num 1</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;   ..$ family  : chr &quot;binomial&quot;</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;   ..$ link    : chr &quot;logit&quot;</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;   ..$ is_glm  : num 1</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;  $ terms  :List of 4</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 5</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
 <p>The output from <code>parse_model()</code> is transformed into a
-<code>dplyr</code>, a.k.a Tidy Eval, formula. All categorical variables
-are operated using <code>if_else()</code>.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; 1 - 1/(1 + exp(20.8527831345691 + (wt * -7.85934263583835) + </span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt;     (ifelse(char_cyl == &quot;cyl6&quot;, 1, 0) * 3.10462643177452) + (ifelse(char_cyl == </span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt;     &quot;cyl8&quot;, 1, 0) * 5.37942092366097)))</span></span></code></pre></div>
-<p>From there, the Tidy Eval formula can be used anywhere where it can
-be operated. <code>tidypredict</code> provides three paths:</p>
+<code>dplyr</code>, a.k.a. Tidy Eval, formula. All categorical variables
+are evaluated using <code>if_else()</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; 1/(1 + exp(-(20.8527831345691 + (wt * -7.85934263583835) + (ifelse(char_cyl == </span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;     &quot;cyl6&quot;, 1, 0) * 3.10462643177452) + (ifelse(char_cyl == &quot;cyl8&quot;, </span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt;     1, 0) * 5.37942092366097))))</span></span></code></pre></div>
+<p>From there, the Tidy Eval formula can be used anywhere it can be
+evaluated. <code>tidypredict</code> provides three paths:</p>
 <ul>
 <li>Use directly inside <code>dplyr</code>,
 <code>mutate(df, !! tidypredict_fit(model))</code></li>
-<li>Use <code>tidypredict_to_column(model)</code> to a piped command
-set</li>
-<li>Use <code>tidypredict_to_sql(model)</code> to retrieve the SQL
+<li>Use <code>tidypredict_to_column(model)</code> to add it to a piped
+command set</li>
+<li>Use <code>tidypredict_sql(model, con)</code> to retrieve the SQL
 statement</li>
 </ul>
-<p>The same applies to the prediction interval functions.</p>
+<p>Prediction intervals are not available for <code>glm</code> models,
+so <code>tidypredict_interval()</code> and
+<code>tidypredict_sql_interval()</code> have no <code>glm</code>
+counterpart.</p>
 </div>
 <div id="how-it-performs" class="section level2">
 <h2>How it performs</h2>
 <p>Testing the <code>tidypredict</code> results is easy. The
 <code>tidypredict_test()</code> function automatically uses the
-<code>lm</code> model object’s data frame, to compare
-<code>tidypredict_fit()</code>, and <code>tidypredict_interval()</code>
-to the results given by <code>predict()</code></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div>
+<code>glm</code> model object’s data frame to compare
+<code>tidypredict_fit()</code> to the results given by
+<code>predict()</code></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;  All results are within the difference threshold</span></span></code></pre></div>
+</div>
+<div id="parsnip" class="section level2">
+<h2>parsnip</h2>
+<p><code>tidypredict</code> also supports <code>glm()</code> model
+objects fitted via the <code>parsnip</code> package, using
+<code>linear_reg()</code> with the <code>&quot;glm&quot;</code> engine.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">linear_reg</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;glm&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="fu">fit</span>(am <span class="sc">~</span> wt <span class="sc">+</span> cyl, <span class="at">data =</span> mtcars)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; 1.5203311478662 + (wt * -0.3729886164835) + (cyl * 0.0138854914772272)</span></span></code></pre></div>
+</div>
+<div id="liblinear" class="section level2">
+<h2>LiblineaR</h2>
+<p>Binary logistic regression models fitted with
+<code>LiblineaR::LiblineaR()</code> are also supported, including
+<code>logistic_reg()</code> models fitted via <code>parsnip</code> with
+the <code>&quot;LiblineaR&quot;</code> engine. As with <code>glm()</code> binomial
+models, predictions are on the 0-to-1 probability scale for the second
+factor level of the outcome.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>liblinear_model <span class="ot">&lt;-</span> <span class="fu">logistic_reg</span>(<span class="at">penalty =</span> <span class="fl">0.1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;LiblineaR&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="fu">fit</span>(<span class="fu">factor</span>(am) <span class="sc">~</span> mpg <span class="sc">+</span> cyl, <span class="at">data =</span> mtcars)</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(liblinear_model)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; 1/(1 + exp(-(-1.78560849993735 + (mpg * 0.166363458887311) + </span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt;     (cyl * -0.324861381084945))))</span></span></code></pre></div>
 </div>
 
 

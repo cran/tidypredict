@@ -4,20 +4,16 @@
 #' @param con Database connection object. It is used to select
 #' the correct SQL translation syntax.
 #'
-#' @examples
-#' library(dbplyr)
+#' @returns A SQL query, as returned by [dbplyr::translate_sql()]. Models that
+#'   produce one formula per class or per outcome return a list of queries.
 #'
+#' @examplesIf rlang::is_installed("dbplyr")
 #' model <- lm(mpg ~ wt + am + cyl, data = mtcars)
-#' tidypredict_sql(model, simulate_dbi())
-#' @keywords internal
+#' tidypredict_sql(model, dbplyr::simulate_dbi())
 #' @export
 tidypredict_sql <- function(model, con) {
-  f <- tidypredict_fit(model)
-  if (inherits(f, "call")) {
-    dbplyr::translate_sql(!!f, con = con)
-  } else {
-    map(f, ~ dbplyr::translate_sql(!!.x, con = con))
-  }
+  rlang::check_installed("dbplyr")
+  translate_fit(tidypredict_fit(model), con)
 }
 
 #' Returns a SQL query with formula to calculate predicted interval
@@ -28,18 +24,26 @@ tidypredict_sql <- function(model, con) {
 #' the correct SQL translation syntax.
 #' @param interval The prediction interval, defaults to 0.95
 #'
-#' @examples
-#' library(dbplyr)
+#' @returns A SQL query, as returned by [dbplyr::translate_sql()], giving the
+#'   half width of the prediction interval.
 #'
+#' @examplesIf rlang::is_installed("dbplyr")
 #' model <- lm(mpg ~ wt + am + cyl, data = mtcars)
-#' tidypredict_sql_interval(model, simulate_dbi())
-#' @keywords internal
+#' tidypredict_sql_interval(model, dbplyr::simulate_dbi())
 #' @export
 tidypredict_sql_interval <- function(model, con, interval = 0.95) {
-  f <- tidypredict_interval(model, interval)
-  if (inherits(f, "call")) {
-    dbplyr::translate_sql(!!f, con = con)
-  } else {
-    map(f, ~ dbplyr::translate_sql(!!.x, con = con))
+  rlang::check_installed("dbplyr")
+  translate_fit(tidypredict_interval(model, interval), con)
+}
+
+# Multiclass and multivariate models return a list of expressions rather than a
+# single one, so each element is translated separately. Everything else is one
+# expression, which for an intercept-only model is a bare number rather than a
+# call, so branching on `is.list()` is what keeps that from being wrapped in a
+# one element list (#313).
+translate_fit <- function(f, con) {
+  if (is.list(f)) {
+    return(map(f, ~ dbplyr::translate_sql(!!.x, con = con)))
   }
+  dbplyr::translate_sql(!!f, con = con)
 }

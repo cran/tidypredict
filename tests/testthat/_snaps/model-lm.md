@@ -5,72 +5,28 @@
     Output
       [1] "1.520331147866 + (wt * -0.372988616484) + (cyl * 0.013885491477)"
 
-# formulas produces correct predictions
+# an ordered factor is rejected
 
     Code
-      tidypredict_test(lm(mpg ~ wt + am + cyl, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(lm(mpg ~ wt, offset = am, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(lm(mpg ~ wt + disp * cyl, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(lm(mpg ~ wt + disp:cyl, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(lm(mpg ~ (wt + disp) * cyl, data = mtcars), mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
-# tidypredict works when variable names are subset of other variables
-
-    Code
-      tidypredict_test(model, mtcars)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
-# we get better error from QR decomposition issues (#124)
-
-    Code
-      tidypredict::tidypredict_fit(lm_fit)
+      tidypredict_fit(lm(y ~ x + g, data = df))
     Condition
-      Error in `parse_model()`:
-      x Unable to calculate inverse of QR decomposition.
-      i This is likely happening because the predictors contain a linear combination of predictors. Please remove and try again.
+      Error in `acceptable_lm()`:
+      ! The treatment contrast is the only one supported at this time. Field(s) with an invalid contrast are: "g".
+
+---
+
+    Code
+      tidypredict_fit(glm(y ~ x + g, data = df))
+    Condition
+      Error in `acceptable_lm()`:
+      ! The treatment contrast is the only one supported at this time. Field(s) with an invalid contrast are: "g".
+
+# prediction intervals need a QR decomposition (#308)
+
+    Code
+      tidypredict_interval(pm)
+    Condition
+      Error in `tidypredict_interval()`:
+      x Unable to calculate the inverse of the QR decomposition.
+      i Prediction intervals are not available for this model, but `tidypredict_fit()` is.
 

@@ -1,0 +1,230 @@
+# A {baguette} `bagger()` object is an ensemble of models fit on bootstrap
+# samples of the training data, stored as parsnip model fits in `model_df`.
+# Only the CART (`rpart`) and C5.0 base models are supported here. Regression
+# predictions are the mean of the individual tree predictions, and
+# classification predictions are the class with the largest mean class
+# probability.
+
+# Parse model --------------------------------------
+
+#' @export
+parse_model.bagger <- function(model) {
+  trees <- bagger_base_fits(model)
+
+  pm <- list()
+  pm$general$model <- "bagger"
+  pm$general$type <- "tree"
+  pm$general$version <- 3
+
+  classes <- bagger_classes(model)
+  if (is.null(classes)) {
+    pm$tree_info_list <- map(trees, rpart_tree_info_full)
+  } else {
+    pm$general$classes <- classes
+    pm$tree_info_list <- map(trees, bagger_classprob_tree_info)
+  }
+
+  as_parsed_model(pm)
+}
+
+# Pull the base model fits out of the ensemble, erroring for base models that
+# are not supported
+bagger_base_fits <- function(model, call = rlang::caller_env()) {
+  base_model <- model$base_model[[1]]
+  if (!base_model %in% c("CART", "C5.0")) {
+    cli::cli_abort(
+      c(
+        "Only {.val CART} and {.val C5.0} bagged models are supported, not {.val {base_model}}.",
+        i = "Fit the model with {.code base_model = \"CART\"} or {.code base_model = \"C5.0\"}."
+      ),
+      call = call
+    )
+  }
+
+  fits <- map(model$model_df$model, function(x) x$fit)
+
+  if (identical(base_model, "C5.0")) {
+    for (fit in fits) {
+      c50_check_supported(fit, call = call)
+    }
+  }
+
+  fits
+}
+
+# The class probability trees of a single base model fit
+bagger_classprob_tree_info <- function(fit, call = rlang::caller_env()) {
+  if (inherits(fit, "C5.0")) {
+    c50_classprob_tree_info(fit, call = call)
+  } else {
+    rpart_classprob_tree_info(fit)
+  }
+}
+
+# `NULL` for regression models, the outcome levels for classification models
+bagger_classes <- function(model) {
+  model$model_df$model[[1]]$lvl
+}
+
+# Fit model -----------------------------------------------
+
+#' @export
+tidypredict_fit.bagger <- function(model, ...) {
+  # An ensemble of stumps mentions no column, so anchor it to one. The
+  # blueprint's predictor prototypes are hardhat's record of the columns
+  # `newdata` has to supply.
+  expr_recycle_over_column(
+    bagger_build_formula(parse_model(model)),
+    names(model$blueprint$ptypes$predictors)
+  )
+}
+
+bagger_build_formula <- function(parsedmodel) {
+  tree_info_list <- parsedmodel$tree_info_list
+  classes <- parsedmodel$general$classes
+
+  if (is.null(classes)) {
+    return(bagger_mean_tree(tree_info_list))
+  }
+
+  probs <- map(
+    seq_along(classes),
+    function(i) bagger_mean_tree(map(tree_info_list, function(x) x[[i]]))
+  )
+  bagger_class_case_when(probs, classes)
+}
+
+# Average the per-tree expressions of a single quantity
+bagger_mean_tree <- function(tree_info_list) {
+  expr_mean(map(tree_info_list, classprob_tree_expr))
+}
+
+# Return the class with the largest probability, with ties going to the class
+# that comes first, matching `which.max()`
+bagger_class_case_when <- function(probs, classes) {
+  build_argmax_case_when(probs, classes)
+}
+
+# Test model -----------------------------------------------
+
+#' @export
+tidypredict_test.bagger <- function(
+  model,
+  df = NULL,
+  threshold = 0.000000000001,
+  include_intervals = FALSE,
+  max_rows = NULL,
+  xg_df = NULL
+) {
+  df <- maybe_head(df, max_rows)
+
+  te <- rlang::eval_tidy(tidypredict_fit(model), df)
+
+  if (!is.null(bagger_classes(model))) {
+    base <- predict(model, df, type = "class")$.pred_class
+    return(test_results_class(base, te))
+  }
+
+  base <- predict(model, df)$.pred
+  test_results_numeric(base, te, threshold)
+}
+
+# For {orbital} -----------------------------------------------
+
+#' Extract regression trees for bagger models
+#'
+#' For use in orbital package.
+#' @param model A bagger model object (regression)
+#' @keywords internal
+#' @export
+.extract_bagger_trees <- function(model) {
+  bagger_check_model(model)
+
+  if (!is.null(bagger_classes(model))) {
+    cli::cli_abort(
+      c(
+        "Classification models are not supported.",
+        i = "Use {.fn .extract_bagger_classprob} for classification models."
+      )
+    )
+  }
+
+  map(bagger_base_fits(model), tidypredict_fit)
+}
+
+#' Extract class probability trees for bagger models
+#'
+#' Returns one list of per-tree expressions for each outcome level. For use in
+#' orbital package.
+#' @param model A bagger model object (classification)
+#' @keywords internal
+#' @export
+.extract_bagger_classprob <- function(model) {
+  bagger_check_model(model)
+
+  classes <- bagger_classes(model)
+  if (is.null(classes)) {
+    cli::cli_abort(
+      c(
+        "Model is not a classification model.",
+        i = "Use {.fn .extract_bagger_trees} for regression models."
+      )
+    )
+  }
+
+  tree_info_list <- map(bagger_base_fits(model), bagger_classprob_tree_info)
+
+  res <- map(
+    seq_along(classes),
+    function(i) {
+      map(tree_info_list, function(x) classprob_tree_expr(x[[i]]))
+    }
+  )
+  names(res) <- classes
+  res
+}
+
+bagger_check_model <- function(model, call = rlang::caller_env()) {
+  if (!inherits(model, "bagger")) {
+    cli::cli_abort(
+      "{.arg model} must be {.cls bagger}, not {.obj_type_friendly {model}}.",
+      call = call
+    )
+  }
+  invisible(model)
+}
+
+#' @exportS3Method
+build_tree_formula.pm_tree_bagger <- function(model) {
+  bagger_build_formula(model)
+}
+
+# Output metadata ---------------------------------
+
+# `bagger_classes()` is the same mode signal `parse_model.bagger()` uses:
+# `NULL` for regression, the outcome levels for classification. A classification
+# ensemble averages class probabilities and then picks the largest, so the fit
+# is a class label rather than a probability.
+#' @export
+tidypredict_output_type.bagger <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  if (is.null(bagger_classes(x))) {
+    return("numeric")
+  }
+  "class"
+}
+
+#' @export
+tidypredict_outcome_levels.bagger <- function(x, ...) {
+  rlang::check_dots_empty()
+  bagger_classes(x)
+}
+
+#' @export
+tidypredict_normalized.bagger <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  # A single expression either way, so there are no per-level values to sum.
+  NA
+}

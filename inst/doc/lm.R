@@ -61,3 +61,10 @@ parsnip_model <- linear_reg() %>%
 
 tidypredict_fit(parsnip_model)
 
+## -----------------------------------------------------------------------------
+library(quantreg)
+
+rq_model <- rq(mpg ~ wt + cyl, data = mtcars)
+
+tidypredict_fit(rq_model)
+

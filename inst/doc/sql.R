@@ -32,11 +32,11 @@ flights_table <- nycflights13::flights %>%
 ## -----------------------------------------------------------------------------
 library(DBI)
 
-con <- dbConnect(RSQLite::SQLite(), path = ":memory:")
-db_fligths <- copy_to(con, flights_table)
+con <- dbConnect(RSQLite::SQLite(), dbname = ":memory:")
+db_flights <- copy_to(con, flights_table)
 
 ## -----------------------------------------------------------------------------
-df <- db_fligths %>%
+df <- db_flights %>%
   select(dep_delay, hour, distance) %>%
   head(1000) %>%
   collect()
@@ -61,7 +61,7 @@ update_statement
 dbSendQuery(con, update_statement)
 
 ## -----------------------------------------------------------------------------
-db_fligths %>%
+db_flights %>%
   select(current_score) %>%
   head(10)
 
@@ -76,7 +76,7 @@ dbWriteTable(
 )
 
 ## -----------------------------------------------------------------------------
-new_predictions <- db_fligths %>%
+new_predictions <- db_flights %>%
   filter(month == 12) %>%
   tidypredict_to_column(model, vars = "score") %>%
   select(

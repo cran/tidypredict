@@ -19,13 +19,16 @@ test_that("returns the right output", {
   )
 })
 
-test_that("Model can be saved and re-loaded", {
+test_that("a parsed model round trips through YAML", {
+  skip_if_not_installed("yaml")
   model <- glm(am ~ wt + cyl, data = mtcars, family = "gaussian")
 
+  # Both sides derive from the same rounded object, so this asserts that the
+  # YAML round trip is lossless, not that either side matches `predict()`.
   model$coefficients <- round(model$coefficients, 7)
 
   pm <- parse_model(model)
-  mp <- tempfile(fileext = ".yml")
+  mp <- withr::local_tempfile(fileext = ".yml")
   yaml::write_yaml(pm, mp)
   l <- yaml::read_yaml(mp)
   pm <- as_parsed_model(l)
@@ -36,50 +39,81 @@ test_that("Model can be saved and re-loaded", {
   )
 })
 
-test_that("formulas produces correct predictions", {
+test_that("formulas produce correct predictions", {
   mtcars$cyl <- paste0("cyl", mtcars$cyl)
   # family = gaussian
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       glm(am ~ wt + cyl + disp, data = mtcars, family = "gaussian"),
       mtcars
-    )
+    )$alert
   )
   # family = binomial
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       glm(am ~ wt + cyl + disp, data = mtcars, family = "binomial"),
       mtcars
-    )
+    )$alert
   )
   # family = gaussian, with interactions
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       glm(am ~ wt * cyl + disp, data = mtcars, family = "gaussian"),
       mtcars
-    )
+    )$alert
   )
-  # family = binomial, with interactions
-  expect_snapshot(
-    tidypredict_test(
-      glm(am ~ wt * cyl + disp, data = mtcars, family = "binomial"),
-      mtcars
-    )
+  # family = binomial, with interactions. This fit separates the data, so glm
+  # warns about fitted probabilities of 0 or 1; the agreement still holds.
+  expect_false(
+    suppressWarnings(
+      tidypredict_test(
+        glm(am ~ wt * cyl + disp, data = mtcars, family = "binomial"),
+        mtcars
+      )
+    )$alert
   )
   # family = gaussian, with interactions
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       glm(am ~ wt:cyl + disp, data = mtcars, family = "gaussian"),
       mtcars
-    )
+    )$alert
   )
   # family = binomial, with interactions
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       glm(am ~ wt:cyl + disp, data = mtcars, family = "binomial"),
       mtcars
-    )
+    )$alert
   )
+})
+
+test_that("every family matches predict() directly", {
+  # `tidypredict_test()` compares against `predict()` too, but only reports a
+  # verdict. These assert the numbers.
+  df <- transform(mtcars, cyl = paste0("cyl", cyl))
+
+  rhs <- c("wt + cyl + disp", "wt * cyl + disp", "wt:cyl + disp")
+  # `am` is 0/1, so the families needing a strictly positive response use `mpg`
+  cases <- c(
+    am = "gaussian",
+    am = "binomial",
+    mpg = "poisson",
+    mpg = "Gamma",
+    mpg = "inverse.gaussian"
+  )
+
+  for (r in rhs) {
+    for (i in seq_along(cases)) {
+      f <- stats::as.formula(paste(names(cases)[i], "~", r))
+      model <- suppressWarnings(glm(f, data = df, family = cases[[i]]))
+      expect_equal(
+        rlang::eval_tidy(tidypredict_fit(model), df),
+        unname(predict(model, df, type = "response")),
+        tolerance = 1e-12
+      )
+    }
+  }
 })
 
 test_that("tidypredict works when variable names are subset of other variables", {
@@ -95,18 +129,84 @@ test_that("tidypredict works when variable names are subset of other variables",
     family = "binomial"
   ))
 
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       model,
       mtcars
-    )
+    )$alert
   )
 })
 
-test_that("tidypredict_interval works for gaussian glm", {
+test_that("an offset is applied", {
+  set.seed(1)
+  df <- data.frame(x = rnorm(60), off = runif(60))
+  df$y <- rpois(60, exp(0.5 + df$x + df$off))
+
+  model <- glm(y ~ x, data = df, family = poisson(), offset = off)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df, type = "response"))
+  )
+})
+
+test_that("prior weights do not change the prediction formula", {
+  set.seed(1)
+  df <- data.frame(x = rnorm(60), z = rnorm(60))
+  df$y <- as.integer(df$x + rnorm(60) > 0)
+  df$w <- rep(c(1, 3), 30)
+
+  model <- glm(y ~ x + z, data = df, family = binomial(), weights = w)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df, type = "response"))
+  )
+})
+
+test_that("`NA` in newdata gives the same answer as predict()", {
+  set.seed(1)
+  df <- data.frame(x = rnorm(60), z = rnorm(60))
+  df$y <- as.integer(df$x + rnorm(60) > 0)
+
+  na_df <- df
+  na_df$x[c(2, 5)] <- NA
+
+  for (fam in list(gaussian(), binomial(), poisson())) {
+    model <- suppressWarnings(glm(y ~ x + z, data = df, family = fam))
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(model), na_df),
+      unname(predict(model, na_df, type = "response"))
+    )
+  }
+})
+
+test_that("tidypredict_interval works for gaussian glm (#293)", {
   model <- glm(mpg ~ wt + cyl, data = mtcars, family = "gaussian")
   interval <- tidypredict_interval(model)
   expect_type(interval, "language")
+
+  # a gaussian glm and the equivalent lm have the same prediction interval
+  fit <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+  half_width <- rlang::eval_tidy(interval, mtcars)
+  reference <- predict(
+    lm(mpg ~ wt + cyl, data = mtcars),
+    mtcars,
+    interval = "prediction"
+  )
+
+  expect_equal(fit - half_width, unname(reference[, "lwr"]))
+  expect_equal(fit + half_width, unname(reference[, "upr"]))
+})
+
+test_that("tidypredict_to_column() adds intervals for a glm (#293)", {
+  model <- glm(mpg ~ wt + cyl, data = mtcars, family = "gaussian")
+
+  out <- tidypredict_to_column(mtcars, model, add_interval = TRUE)
+
+  expect_equal(nrow(out), nrow(mtcars))
+  expect_false(anyNA(out$lower))
+  expect_false(anyNA(out$upper))
 })
 
 test_that("tidypredict_interval errors for non-gaussian glm", {

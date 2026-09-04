@@ -19,13 +19,14 @@ test_that("returns the right output", {
   )
 })
 
-test_that("Model can be saved and re-loaded", {
+test_that("model can be saved and re-loaded", {
+  skip_if_not_installed("yaml")
   model <- lm(am ~ wt + cyl, data = mtcars)
 
   model$coefficients <- round(model$coefficients, 7)
 
   pm <- parse_model(model)
-  mp <- tempfile(fileext = ".yml")
+  mp <- withr::local_tempfile(fileext = ".yml")
   yaml::write_yaml(pm, mp)
   l <- yaml::read_yaml(mp)
   pm <- as_parsed_model(l)
@@ -36,47 +37,47 @@ test_that("Model can be saved and re-loaded", {
   )
 })
 
-test_that("formulas produces correct predictions", {
+test_that("formulas produce correct predictions", {
   mtcars$cyl <- paste0("cyl", mtcars$cyl)
 
   # normal
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       lm(mpg ~ wt + am + cyl, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 
   # offset
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       lm(mpg ~ wt, offset = am, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 
   # interaction
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       lm(mpg ~ wt + disp * cyl, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 
   # interaction
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       lm(mpg ~ wt + disp:cyl, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 
   # interactions
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       lm(mpg ~ (wt + disp) * cyl, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 })
 
@@ -92,12 +93,222 @@ test_that("tidypredict works when variable names are subset of other variables",
     data = mtcars
   )
 
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       model,
       mtcars
-    )
+    )$alert
   )
+})
+
+test_that("longest variable name wins with three nested prefixes (#290)", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(30),
+    x = rnorm(30),
+    xyz = factor(rep(c("A", "B", "C"), each = 10)),
+    xy = rnorm(30)
+  )
+
+  expect_false(tidypredict_test(lm(y ~ x + xyz + xy, data = df), df)$alert)
+  expect_false(tidypredict_test(glm(y ~ x + xyz + xy, data = df), df)$alert)
+})
+
+test_that("factor levels containing a colon work (#308)", {
+  skip_if_not_installed("quantreg")
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    x = rnorm(60),
+    g = factor(rep(c("a", "b:2", "c"), length.out = 60))
+  )
+
+  expect_false(tidypredict_test(lm(y ~ x + g, data = df), df)$alert)
+  expect_false(tidypredict_test(lm(y ~ x * g, data = df), df)$alert)
+  expect_false(tidypredict_test(glm(y ~ x + g, data = df), df)$alert)
+
+  model <- suppressWarnings(quantreg::rq(y ~ x + g, data = df))
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df))
+  )
+})
+
+test_that("a coefficient label colliding with a variable name works (#308)", {
+  skip_if_not_installed("quantreg")
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    g = factor(rep(c("x1", "y2", "z3"), length.out = 60)),
+    gy2 = rnorm(60)
+  )
+
+  expect_false(tidypredict_test(lm(y ~ g + gy2, data = df), df)$alert)
+  expect_false(tidypredict_test(glm(y ~ g + gy2, data = df), df)$alert)
+
+  model <- suppressWarnings(quantreg::rq(y ~ g + gy2, data = df))
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df))
+  )
+})
+
+test_that("an unresolvable factor level is reported (#308)", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(40),
+    g = factor(rep(c("a", "a:hb"), length.out = 40)),
+    h = factor(rep(c("b:hc", "c"), each = 2, length.out = 40))
+  )
+
+  expect_error(
+    tidypredict_fit(lm(y ~ g:h, data = df)),
+    "Unable to tell which factor levels"
+  )
+})
+
+test_that("four nested prefixes and interactions between them work (#308)", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    a = rnorm(60),
+    ab = rnorm(60),
+    abc = rnorm(60),
+    abcd = factor(rep(c("l1", "l2"), length.out = 60)),
+    abcde = factor(rep(c("p", "q", "r"), length.out = 60))
+  )
+
+  expect_false(
+    tidypredict_test(lm(y ~ a + ab + abc + abcd + abcde, data = df), df)$alert
+  )
+  expect_false(
+    tidypredict_test(lm(y ~ a * abcd + ab:abcde, data = df), df)$alert
+  )
+})
+
+test_that("an unused factor level works", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    x = rnorm(60),
+    g = factor(rep(c("a", "b", "c"), length.out = 60), levels = letters[1:4])
+  )
+
+  lm_fit <- lm(y ~ x + g, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), df),
+    unname(predict(lm_fit, df))
+  )
+
+  glm_fit <- glm(y ~ x + g, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(glm_fit), df),
+    unname(predict(glm_fit, df, type = "response"))
+  )
+})
+
+test_that("an ordered factor is rejected", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    x = rnorm(60),
+    g = factor(rep(c("a", "b", "c"), length.out = 60), ordered = TRUE)
+  )
+
+  expect_snapshot(error = TRUE, tidypredict_fit(lm(y ~ x + g, data = df)))
+  expect_snapshot(error = TRUE, tidypredict_fit(glm(y ~ x + g, data = df)))
+})
+
+test_that("`NA` in newdata gives the same answer as predict()", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    x = rnorm(60),
+    g = factor(rep(c("a", "b", "c"), length.out = 60))
+  )
+  df$yb <- as.integer(df$y > 0)
+
+  na_df <- df
+  na_df$x[c(2, 5)] <- NA
+  na_df$g[c(1, 3)] <- NA
+
+  lm_fit <- lm(y ~ x + g, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), na_df),
+    unname(predict(lm_fit, na_df))
+  )
+
+  glm_fit <- glm(yb ~ x + g, data = df, family = binomial())
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(glm_fit), na_df),
+    unname(predict(glm_fit, na_df, type = "response"))
+  )
+})
+
+test_that("`NA` in the training data works", {
+  set.seed(1)
+  df <- data.frame(y = rnorm(60), x = rnorm(60), z = rnorm(60))
+  train <- df
+  train$x[1:5] <- NA
+
+  lm_fit <- lm(y ~ x + z, data = train)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), df),
+    unname(predict(lm_fit, df))
+  )
+})
+
+test_that("degenerate fit shapes work", {
+  set.seed(1)
+  df <- data.frame(y = rnorm(60), x = rnorm(60))
+
+  # An intercept-only fit translates to a constant, so it evaluates to length 1
+  intercept_only <- lm(y ~ 1, data = df)
+  expect_equal(
+    rep(rlang::eval_tidy(tidypredict_fit(intercept_only), df), nrow(df)),
+    unname(predict(intercept_only, df))
+  )
+
+  no_intercept <- lm(y ~ x - 1, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(no_intercept), df),
+    unname(predict(no_intercept, df))
+  )
+
+  df$const <- 5
+  constant <- suppressWarnings(lm(const ~ x, data = df))
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(constant), df),
+    unname(predict(constant, df))
+  )
+})
+
+test_that("logical predictors work", {
+  set.seed(1)
+  df <- data.frame(
+    y = rnorm(60),
+    x = rnorm(60),
+    flag = rep(c(TRUE, FALSE), 30)
+  )
+
+  expect_false(tidypredict_test(lm(y ~ x + flag, data = df), df)$alert)
+})
+
+test_that("weighted fits match the interval `predict()` returns (#308)", {
+  set.seed(1)
+  weights <- runif(nrow(mtcars), 1, 5)
+  model <- lm(mpg ~ wt + disp, data = mtcars, weights = weights)
+
+  # `predict.lm()` assumes a constant prediction variance whenever `newdata` is
+  # given, which is the only case a translated formula covers.
+  expected <- suppressWarnings(
+    predict(model, mtcars, interval = "prediction")
+  )
+  fit <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+  half <- rlang::eval_tidy(tidypredict_interval(model), mtcars)
+
+  expect_equal(unname(fit + half), unname(expected[, "upr"]))
+  expect_equal(unname(fit - half), unname(expected[, "lwr"]))
 })
 
 test_that("tidy() works", {
@@ -107,15 +318,76 @@ test_that("tidy() works", {
   )
 })
 
-test_that("we get better error from QR decomposition issues (#124)", {
+test_that("rank-deficient fits drop aliased coefficients (#124, #308)", {
   mtcars$vs2 <- mtcars$disp - mtcars$vs
 
   lm_fit <- lm(mpg ~ ., mtcars)
 
-  expect_snapshot(
-    error = TRUE,
-    tidypredict::tidypredict_fit(lm_fit)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), mtcars),
+    unname(predict(lm_fit, mtcars))
   )
+})
+
+test_that("duplicated predictor columns work (#308)", {
+  set.seed(1)
+  df <- data.frame(x1 = rnorm(50), x2 = runif(50, 0, 10))
+  df$y <- 2 * df$x1 - 0.5 * df$x2 + rnorm(50, sd = 0.3)
+  df$xdup <- df$x1
+
+  lm_fit <- lm(y ~ x1 + xdup, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), df),
+    unname(predict(lm_fit, df))
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_interval(lm_fit), df) +
+      unname(predict(lm_fit, df)),
+    unname(predict(lm_fit, df, interval = "prediction")[, "upr"])
+  )
+
+  glm_fit <- glm(y ~ x1 + xdup, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(glm_fit), df),
+    unname(predict(glm_fit, df, type = "response"))
+  )
+})
+
+test_that("zero-variance predictors work (#308)", {
+  set.seed(1)
+  df <- data.frame(x1 = rnorm(50), x2 = runif(50, 0, 10))
+  df$y <- 2 * df$x1 - 0.5 * df$x2 + rnorm(50, sd = 0.3)
+  df$yb <- as.integer(df$y > 0)
+  df$xconst <- 1
+
+  lm_fit <- lm(y ~ x1 + xconst, data = df)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(lm_fit), df),
+    unname(predict(lm_fit, df))
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_interval(lm_fit), df) +
+      unname(predict(lm_fit, df)),
+    unname(predict(lm_fit, df, interval = "prediction")[, "upr"])
+  )
+
+  glm_fit <- suppressWarnings(
+    glm(yb ~ x1 + xconst, data = df, family = binomial())
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(glm_fit), df),
+    unname(predict(glm_fit, df, type = "response"))
+  )
+})
+
+test_that("prediction intervals need a QR decomposition (#308)", {
+  pm <- parse_model(lm(mpg ~ wt + cyl, data = mtcars))
+  pm$terms <- lapply(pm$terms, function(term) {
+    term$qr <- NULL
+    term
+  })
+
+  expect_snapshot(error = TRUE, tidypredict_interval(pm))
 })
 
 test_that("don't add with 0 (#147)", {
@@ -145,6 +417,22 @@ test_that("binomial family with logit link works", {
   native <- unname(predict(model, type = "response"))
   tidy <- rlang::eval_tidy(fit, mtcars)
   expect_equal(tidy, native)
+})
+
+test_that("logit link keeps probabilities below the double precision floor", {
+  suppressWarnings(
+    model <- glm(am ~ wt + hp, data = mtcars, family = binomial())
+  )
+  fit <- tidypredict_fit(model)
+  # A linear predictor this far below zero gives a probability that the
+  # `1 - 1 / (1 + exp(f))` spelling of the inverse link rounds down to 0.
+  newdata <- data.frame(wt = 20, hp = 500)
+
+  expect_equal(
+    rlang::eval_tidy(fit, newdata),
+    unname(predict(model, newdata, type = "response"))
+  )
+  expect_gt(rlang::eval_tidy(fit, newdata), 0)
 })
 
 test_that("poisson family with log link works", {

@@ -2,6 +2,12 @@
 #'
 #' @param x A parsed model object
 #'
+#' @returns The parsed model with its `parsed_model` and `pm_*` classes set.
+#'
+#' @examples
+#' pm <- parse_model(lm(mpg ~ wt, data = mtcars))
+#' as_parsed_model(pm)
+#'
 #' @export
 as_parsed_model <- function(x) {
   UseMethod("as_parsed_model")
@@ -9,7 +15,45 @@ as_parsed_model <- function(x) {
 
 #' @export
 as_parsed_model.list <- function(x) {
-  t <- paste0("pm_", x$general$type)
-  class(x) <- c("parsed_model", t, class(x))
+  # `general$type` is what the `pm_*` dispatch class is built from, so without
+  # it the object gets a class of `pm_` that no method matches, and the failure
+  # surfaces much later (#313).
+  type <- x$general$type
+  if (!rlang::is_string(type) || type == "") {
+    cli::cli_abort(
+      c(
+        "{.arg x} is not a valid parsed model.",
+        i = "{.code x$general$type} must be a single string, not
+             {.obj_type_friendly {type}}."
+      )
+    )
+  }
+
+  class(x) <- c("parsed_model", paste0("pm_", type), class(x))
   x
+}
+
+#' @export
+as_parsed_model.default <- function(x) {
+  cli::cli_abort(
+    "{.arg x} must be a parsed model, not {.obj_type_friendly {x}}."
+  )
+}
+
+# Models whose fit is one linear predictor per class, combined with a softmax.
+new_multiclass_parsed_model <- function(
+  model,
+  classes,
+  class_terms,
+  version = 2
+) {
+  pm <- list()
+  pm$general$model <- model
+  pm$general$version <- version
+  pm$general$type <- "multiclass_regression"
+  pm$general$family <- "multinomial"
+  pm$classes <- classes
+  pm$class_terms <- class_terms
+
+  as_parsed_model(pm)
 }

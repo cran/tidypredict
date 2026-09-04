@@ -1,0 +1,73 @@
+# Predict ---------------------------------------
+
+# `multinom` objects also inherit from `nnet`, so this cannot fall through to
+# `tidypredict_fit.default()`: it would reach the nnet method instead.
+#' @export
+tidypredict_fit.multinom <- function(model) {
+  tidypredict_fit(parse_model(model))
+}
+
+# Parse model --------------------------------------
+
+#' @export
+parse_model.multinom <- function(model) {
+  acceptable_formula(model)
+
+  classes <- model$lev
+  vars <- names(attr(model$terms, "dataClasses"))
+
+  coefs <- stats::coef(model)
+  # Binary outcomes return a named vector of coefficients for the second level
+  if (!is.matrix(coefs)) {
+    coefs <- matrix(
+      coefs,
+      nrow = 1,
+      dimnames = list(classes[-1], names(coefs))
+    )
+  }
+
+  labels <- colnames(coefs)
+  fields <- lm_fields(model, labels)
+
+  # The first level is the reference class, its linear predictor is 0
+  class_terms <- c(
+    list(multinom_reference_terms()),
+    lapply(
+      classes[-1],
+      \(cl) build_terms(coefs[cl, ], labels, vars, fields = fields)
+    )
+  )
+
+  new_multiclass_parsed_model(
+    "multinom",
+    classes,
+    class_terms
+  )
+}
+
+multinom_reference_terms <- function() {
+  list(list(
+    label = "(Intercept)",
+    coef = 0,
+    is_intercept = 1,
+    fields = list(list(type = "ordinary", col = "(Intercept)"))
+  ))
+}
+
+
+#' @export
+acceptable_formula.multinom <- function(model) acceptable_lm(model)
+
+# Test ---------------------------------------------
+
+#' @export
+tidypredict_test.multinom <- function(
+  model,
+  df,
+  threshold = 0.000000000001,
+  include_intervals = FALSE,
+  max_rows = NULL,
+  xg_df = NULL
+) {
+  abort_test_unsupported("{.fn nnet::multinom} models")
+}

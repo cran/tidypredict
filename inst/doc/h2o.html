@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Gradient boosting, using H2O</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Gradient boosting, using H2O</h1>
+
+
+
+<table>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Works</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>tidypredict_fit()</code>, <code>tidypredict_sql()</code></td>
+<td>✔</td>
+</tr>
+<tr class="even">
+<td><code>parse_model()</code></td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td><code>tidypredict_to_column()</code></td>
+<td>✔</td>
+</tr>
+<tr class="even">
+<td><code>tidypredict_test()</code></td>
+<td>✔</td>
+</tr>
+<tr class="odd">
+<td><code>tidypredict_interval()</code>,
+<code>tidypredict_sql_interval()</code></td>
+<td>✗</td>
+</tr>
+<tr class="even">
+<td><code>parsnip</code></td>
+<td>✔</td>
+</tr>
+</tbody>
+</table>
+<div id="how-it-works" class="section level2">
+<h2>How it works</h2>
+<p><code>tidypredict</code> supports H2O gradient boosting models (GBM)
+fitted through the <code>parsnip</code> package with the
+<code>&quot;h2o_gbm&quot;</code> engine of <code>boost_tree()</code>, which is
+provided by the <code>agua</code> package. Both regression and
+classification are supported.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(parsnip)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(agua)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">boost_tree</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">trees =</span> <span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;h2o_gbm&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl <span class="sc">+</span> hp, <span class="at">data =</span> mtcars)</span></code></pre></div>
+</div>
+<div id="under-the-hood" class="section level2">
+<h2>Under the hood</h2>
+<p>An H2O model is a handle into a running H2O cluster.
+<code>tidypredict</code> pulls each boosted tree from the cluster with
+<code>h2o::h2o.getModelTree()</code> and turns it into a nested
+<code>dplyr::case_when()</code> statement. The individual tree
+contributions are added together (along with the model’s initial value)
+to form the Tidy Eval formula. Because the trees live in the cluster, an
+active <code>h2o.init()</code> connection is required.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; 20.090625 + (case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ </span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 1.7250888 ~ 3.0928125, .default = 4.1428123), </span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 2.1698422 ~ case_when(wt &lt; 2.0377436 ~ </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co">#&gt;         2.1628125, .default = 1.7728126), .default = 3.6928124)), </span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(cyl &lt; 7 ~ case_when(wt &lt; 3.326375 | </span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(hp &lt; 102.5 ~ case_when(wt &lt; 3.1730468 | </span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(hp &lt; 96.5 ~ 0.81281245, .default = 0.4228125), </span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;         .default = 1.2928125), .default = case_when(hp &lt; 141.5 | </span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;         is.na(hp) ~ case_when(cyl &lt; 5 ~ 0.39281252, .default = 0.3128125), </span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;         .default = -0.1171875)), .default = case_when(wt &lt; 3.4495606 ~ </span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt;         -0.4771875, .default = -0.5971875)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co">#&gt;         4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ </span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="co">#&gt;         case_when(hp &lt; 164 ~ case_when(wt &lt; 3.4846094 ~ -1.4671875, </span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a><span class="co">#&gt;             .default = -1.3771875), .default = case_when(hp &lt; </span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co">#&gt;             177.5 ~ -0.3421875, .default = -1.1371875)), .default = case_when(hp &lt; </span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#&gt;         254.5 ~ case_when(wt &lt; 3.7039063 ~ -1.7371875, .default = -2.0371876), </span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.379375 ~ -1.2871876, .default = -1.5271875))), </span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 224.5 | is.na(hp) ~ -2.9071875, </span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co">#&gt;             .default = -1.6171875)))) + case_when(wt &lt; 2.2596803 ~ </span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; 1.7250888 ~ 2.1649687, </span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co">#&gt;         .default = 2.8999689), .default = case_when(wt &lt; 2.1698422 ~ </span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 2.0377436 ~ 1.513969, .default = 1.2409687), </span></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co">#&gt;         .default = 2.5849686)), .default = case_when(cyl &lt; 7 ~ </span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.326375 | is.na(wt) ~ case_when(hp &lt; 102.5 ~ </span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.1730468 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.568969, .default = 0.29596883), .default = 0.9049686), </span></span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 141.5 | is.na(hp) ~ case_when(wt &lt; </span></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co">#&gt;             3.0383594 | is.na(wt) ~ 0.210969, .default = 0.298969), </span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a><span class="co">#&gt;             .default = -0.08203148)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt;         3.4495606 ~ -0.3340313, .default = -0.41803104)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt;     4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ case_when(hp &lt; </span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt;     164 ~ case_when(wt &lt; 3.4846094 ~ -1.0270313, .default = -0.9640314), </span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(hp &lt; 177.5 ~ -0.23953135, .default = -0.79603136)), </span></span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(hp &lt; 254.5 ~ case_when(wt &lt; 3.7039063 ~ </span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt;         -1.2160312, .default = -1.4260314), .default = case_when(wt &lt; </span></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt;         3.379375 ~ -0.9010315, .default = -1.0690315))), .default = case_when(hp &lt; </span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt;     224.5 | is.na(hp) ~ -2.035031, .default = -1.1320314)))) + </span></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 1.5154783, .default = 2.0299783), .default = case_when(wt &lt; </span></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(wt &lt; 2.0377436 ~ 1.0597781, .default = 0.8686781), </span></span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a><span class="co">#&gt;         .default = 1.8094782)), .default = case_when(cyl &lt; 7 ~ </span></span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.326375 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt;             102.5 ~ case_when(wt &lt; 3.1730468 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.39827806, .default = 0.20717812), .default = 0.6334781), </span></span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(hp &lt; 141.5 | is.na(hp) ~ case_when(cyl &lt; </span></span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt;                 5 ~ 0.21167804, .default = 0.1468781), .default = -0.0574221)), </span></span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.4495606 ~ -0.23382169, </span></span>
+<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.29262152)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a><span class="co">#&gt;         4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ </span></span>
+<span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a><span class="co">#&gt;         case_when(hp &lt; 164 ~ case_when(wt &lt; 3.4846094 ~ -0.7189221, </span></span>
+<span id="cb2-52"><a href="#cb2-52" tabindex="-1"></a><span class="co">#&gt;             .default = -0.67482203), .default = case_when(hp &lt; </span></span>
+<span id="cb2-53"><a href="#cb2-53" tabindex="-1"></a><span class="co">#&gt;             177.5 ~ -0.1676722, .default = -0.5572218)), .default = case_when(hp &lt; </span></span>
+<span id="cb2-54"><a href="#cb2-54" tabindex="-1"></a><span class="co">#&gt;         254.5 ~ case_when(wt &lt; 3.7039063 ~ -0.8512216, .default = -0.9982221), </span></span>
+<span id="cb2-55"><a href="#cb2-55" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.379375 ~ -0.63072205, .default = -0.7483223))), </span></span>
+<span id="cb2-56"><a href="#cb2-56" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 224.5 | is.na(hp) ~ -1.4245218, </span></span>
+<span id="cb2-57"><a href="#cb2-57" tabindex="-1"></a><span class="co">#&gt;             .default = -0.7924223)))) + case_when(wt &lt; 2.2596803 ~ </span></span>
+<span id="cb2-58"><a href="#cb2-58" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; 1.7250888 ~ 1.0608349, </span></span>
+<span id="cb2-59"><a href="#cb2-59" tabindex="-1"></a><span class="co">#&gt;         .default = 1.420985), .default = case_when(wt &lt; 2.1698422 ~ </span></span>
+<span id="cb2-60"><a href="#cb2-60" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 2.0377436 ~ 0.7418446, .default = 0.60807496), </span></span>
+<span id="cb2-61"><a href="#cb2-61" tabindex="-1"></a><span class="co">#&gt;         .default = 1.2666345)), .default = case_when(cyl &lt; 7 ~ </span></span>
+<span id="cb2-62"><a href="#cb2-62" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.326375 | is.na(wt) ~ case_when(hp &lt; 102.5 ~ </span></span>
+<span id="cb2-63"><a href="#cb2-63" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.1730468 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-64"><a href="#cb2-64" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.2787949, .default = 0.14502469), .default = 0.44343463), </span></span>
+<span id="cb2-65"><a href="#cb2-65" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 141.5 | is.na(hp) ~ case_when(wt &lt; </span></span>
+<span id="cb2-66"><a href="#cb2-66" tabindex="-1"></a><span class="co">#&gt;             3.0383594 | is.na(wt) ~ 0.09713482, .default = 0.16521503), </span></span>
+<span id="cb2-67"><a href="#cb2-67" tabindex="-1"></a><span class="co">#&gt;             .default = -0.040195312)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-68"><a href="#cb2-68" tabindex="-1"></a><span class="co">#&gt;         3.4495606 ~ -0.16367513, .default = -0.20483504)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-69"><a href="#cb2-69" tabindex="-1"></a><span class="co">#&gt;     4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ case_when(hp &lt; </span></span>
+<span id="cb2-70"><a href="#cb2-70" tabindex="-1"></a><span class="co">#&gt;     164 ~ case_when(wt &lt; 3.4846094 ~ -0.5032456, .default = -0.47237548), </span></span>
+<span id="cb2-71"><a href="#cb2-71" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(hp &lt; 177.5 ~ -0.11737026, .default = -0.39005503)), </span></span>
+<span id="cb2-72"><a href="#cb2-72" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(hp &lt; 254.5 ~ case_when(wt &lt; 3.7039063 ~ </span></span>
+<span id="cb2-73"><a href="#cb2-73" tabindex="-1"></a><span class="co">#&gt;         -0.5958553, .default = -0.69875544), .default = case_when(wt &lt; </span></span>
+<span id="cb2-74"><a href="#cb2-74" tabindex="-1"></a><span class="co">#&gt;         3.379375 ~ -0.4415054, .default = -0.5238258))), .default = case_when(hp &lt; </span></span>
+<span id="cb2-75"><a href="#cb2-75" tabindex="-1"></a><span class="co">#&gt;     224.5 | is.na(hp) ~ -0.9971653, .default = -0.55469537)))) + </span></span>
+<span id="cb2-76"><a href="#cb2-76" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb2-77"><a href="#cb2-77" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.74258435, .default = 0.9946897), .default = case_when(wt &lt; </span></span>
+<span id="cb2-78"><a href="#cb2-78" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(wt &lt; 2.0377436 ~ 0.51929134, .default = 0.42565268), </span></span>
+<span id="cb2-79"><a href="#cb2-79" tabindex="-1"></a><span class="co">#&gt;         .default = 0.8866443)), .default = case_when(cyl &lt; 7 ~ </span></span>
+<span id="cb2-80"><a href="#cb2-80" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.326375 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-81"><a href="#cb2-81" tabindex="-1"></a><span class="co">#&gt;             102.5 ~ case_when(wt &lt; 3.1730468 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-82"><a href="#cb2-82" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.19515634, .default = 0.1015171), .default = 0.3104045), </span></span>
+<span id="cb2-83"><a href="#cb2-83" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(hp &lt; 141.5 | is.na(hp) ~ case_when(cyl &lt; </span></span>
+<span id="cb2-84"><a href="#cb2-84" tabindex="-1"></a><span class="co">#&gt;                 5 ~ 0.11903412, .default = 0.06686634), .default = -0.028136672)), </span></span>
+<span id="cb2-85"><a href="#cb2-85" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.4495606 ~ -0.11457253, </span></span>
+<span id="cb2-86"><a href="#cb2-86" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.1433843)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-87"><a href="#cb2-87" tabindex="-1"></a><span class="co">#&gt;         4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ </span></span>
+<span id="cb2-88"><a href="#cb2-88" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.8098438 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-89"><a href="#cb2-89" tabindex="-1"></a><span class="co">#&gt;             3.7571313 | is.na(wt) ~ -0.20328303, .default = -0.6030386), </span></span>
+<span id="cb2-90"><a href="#cb2-90" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.9561818 ~ -0.007159081, </span></span>
+<span id="cb2-91"><a href="#cb2-91" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.24303864)), .default = case_when(hp &lt; </span></span>
+<span id="cb2-92"><a href="#cb2-92" tabindex="-1"></a><span class="co">#&gt;         254.5 ~ case_when(wt &lt; 3.7039063 ~ -0.41709858, .default = -0.48912886), </span></span>
+<span id="cb2-93"><a href="#cb2-93" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.379375 ~ -0.30905378, .default = -0.36667785))), </span></span>
+<span id="cb2-94"><a href="#cb2-94" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 224.5 | is.na(hp) ~ -0.69801563, </span></span>
+<span id="cb2-95"><a href="#cb2-95" tabindex="-1"></a><span class="co">#&gt;             .default = -0.3882868)))) + case_when(wt &lt; 2.2596803 ~ </span></span>
+<span id="cb2-96"><a href="#cb2-96" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; 1.7250888 ~ 0.51980907, </span></span>
+<span id="cb2-97"><a href="#cb2-97" tabindex="-1"></a><span class="co">#&gt;         .default = 0.69628274), .default = case_when(wt &lt; 2.1698422 ~ </span></span>
+<span id="cb2-98"><a href="#cb2-98" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 2.0377436 ~ 0.36350405, .default = 0.29795665), </span></span>
+<span id="cb2-99"><a href="#cb2-99" tabindex="-1"></a><span class="co">#&gt;         .default = 0.620651)), .default = case_when(cyl &lt; 7 ~ </span></span>
+<span id="cb2-100"><a href="#cb2-100" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.326375 | is.na(wt) ~ case_when(hp &lt; 102.5 ~ </span></span>
+<span id="cb2-101"><a href="#cb2-101" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.1730468 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-102"><a href="#cb2-102" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.1366095, .default = 0.07106209), .default = 0.21728335), </span></span>
+<span id="cb2-103"><a href="#cb2-103" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 141.5 | is.na(hp) ~ case_when(wt &lt; </span></span>
+<span id="cb2-104"><a href="#cb2-104" tabindex="-1"></a><span class="co">#&gt;             3.0383594 | is.na(wt) ~ 0.04271759, .default = 0.0955909), </span></span>
+<span id="cb2-105"><a href="#cb2-105" tabindex="-1"></a><span class="co">#&gt;             .default = -0.01969551)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-106"><a href="#cb2-106" tabindex="-1"></a><span class="co">#&gt;         3.4495606 ~ -0.08020077, .default = -0.100368805)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-107"><a href="#cb2-107" tabindex="-1"></a><span class="co">#&gt;     4.660125 | is.na(wt) ~ case_when(hp &lt; 211 | is.na(hp) ~ case_when(hp &lt; </span></span>
+<span id="cb2-108"><a href="#cb2-108" tabindex="-1"></a><span class="co">#&gt;     164 ~ case_when(wt &lt; 3.4846094 ~ -0.2912867, .default = -0.26967773), </span></span>
+<span id="cb2-109"><a href="#cb2-109" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 3.7525 ~ -0.004113865, .default = -0.19908859)), </span></span>
+<span id="cb2-110"><a href="#cb2-110" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(hp &lt; 254.5 ~ case_when(wt &lt; 3.7039063 ~ </span></span>
+<span id="cb2-111"><a href="#cb2-111" tabindex="-1"></a><span class="co">#&gt;         -0.29196888, .default = -0.34239012), .default = case_when(wt &lt; </span></span>
+<span id="cb2-112"><a href="#cb2-112" tabindex="-1"></a><span class="co">#&gt;         3.379375 ~ -0.21633774, .default = -0.25667438))), .default = case_when(hp &lt; </span></span>
+<span id="cb2-113"><a href="#cb2-113" tabindex="-1"></a><span class="co">#&gt;     224.5 | is.na(hp) ~ -0.4886111, .default = -0.27180085)))) + </span></span>
+<span id="cb2-114"><a href="#cb2-114" tabindex="-1"></a><span class="co">#&gt;     case_when(cyl &lt; 5 ~ case_when(wt &lt; 2.2577705 | is.na(wt) ~ </span></span>
+<span id="cb2-115"><a href="#cb2-115" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 1.8853853 ~ case_when(wt &lt; 1.725376 ~ </span></span>
+<span id="cb2-116"><a href="#cb2-116" tabindex="-1"></a><span class="co">#&gt;             0.36386615, .default = 0.48739767), .default = case_when(wt &lt; </span></span>
+<span id="cb2-117"><a href="#cb2-117" tabindex="-1"></a><span class="co">#&gt;             2.169276 | is.na(wt) ~ case_when(wt &lt; 2.039326 ~ </span></span>
+<span id="cb2-118"><a href="#cb2-118" tabindex="-1"></a><span class="co">#&gt;             0.25445274, .default = 0.20856972), .default = 0.4344556)), </span></span>
+<span id="cb2-119"><a href="#cb2-119" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.1699717 ~ case_when(hp &lt; </span></span>
+<span id="cb2-120"><a href="#cb2-120" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.09562649, .default = case_when(wt &lt; 2.6247656 ~ </span></span>
+<span id="cb2-121"><a href="#cb2-121" tabindex="-1"></a><span class="co">#&gt;             0.049743462, .default = 0.07050888)), .default = 0.15209839)), </span></span>
+<span id="cb2-122"><a href="#cb2-122" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 193 | is.na(hp) ~ case_when(wt &lt; </span></span>
+<span id="cb2-123"><a href="#cb2-123" tabindex="-1"></a><span class="co">#&gt;             3.3264766 ~ case_when(wt &lt; 3.0449898 ~ case_when(hp &lt; </span></span>
+<span id="cb2-124"><a href="#cb2-124" tabindex="-1"></a><span class="co">#&gt;             143 | is.na(hp) ~ 0.009599304, .default = -0.013786927), </span></span>
+<span id="cb2-125"><a href="#cb2-125" tabindex="-1"></a><span class="co">#&gt;             .default = 0.066913724), .default = case_when(wt &lt; </span></span>
+<span id="cb2-126"><a href="#cb2-126" tabindex="-1"></a><span class="co">#&gt;             3.8144138 | is.na(wt) ~ case_when(wt &lt; 3.7551303 | </span></span>
+<span id="cb2-127"><a href="#cb2-127" tabindex="-1"></a><span class="co">#&gt;             is.na(wt) ~ case_when(wt &lt; 3.6250772 | is.na(wt) ~ </span></span>
+<span id="cb2-128"><a href="#cb2-128" tabindex="-1"></a><span class="co">#&gt;             -0.11169243, .default = 0.0891806), .default = -0.36240026), </span></span>
+<span id="cb2-129"><a href="#cb2-129" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.9561841 ~ 0.05471512, </span></span>
+<span id="cb2-130"><a href="#cb2-130" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.11040047))), .default = case_when(hp &lt; </span></span>
+<span id="cb2-131"><a href="#cb2-131" tabindex="-1"></a><span class="co">#&gt;             222.5 ~ -0.34202775, .default = case_when(hp &lt; 253.5 ~ </span></span>
+<span id="cb2-132"><a href="#cb2-132" tabindex="-1"></a><span class="co">#&gt;             case_when(hp &lt; 238 ~ -0.19026054, .default = case_when(wt &lt; </span></span>
+<span id="cb2-133"><a href="#cb2-133" tabindex="-1"></a><span class="co">#&gt;                 3.7086718 ~ -0.20437808, .default = -0.2396731)), </span></span>
+<span id="cb2-134"><a href="#cb2-134" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.3739061 ~ -0.15143657, </span></span>
+<span id="cb2-135"><a href="#cb2-135" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.17967196))))) + case_when(cyl &lt; </span></span>
+<span id="cb2-136"><a href="#cb2-136" tabindex="-1"></a><span class="co">#&gt;     5 ~ case_when(wt &lt; 2.2577705 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-137"><a href="#cb2-137" tabindex="-1"></a><span class="co">#&gt;     1.8853853 ~ case_when(wt &lt; 1.725376 ~ 0.2547061, .default = 0.3411788), </span></span>
+<span id="cb2-138"><a href="#cb2-138" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 2.169276 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-139"><a href="#cb2-139" tabindex="-1"></a><span class="co">#&gt;         2.039326 ~ 0.17811665, .default = 0.14599857), .default = 0.30411884)), </span></span>
+<span id="cb2-140"><a href="#cb2-140" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 3.1699717 ~ case_when(hp &lt; 96.5 ~ </span></span>
+<span id="cb2-141"><a href="#cb2-141" tabindex="-1"></a><span class="co">#&gt;         0.06693844, .default = case_when(wt &lt; 2.6247656 ~ 0.034820367, </span></span>
+<span id="cb2-142"><a href="#cb2-142" tabindex="-1"></a><span class="co">#&gt;         .default = 0.049356196)), .default = 0.10646908)), .default = case_when(cyl &lt; </span></span>
+<span id="cb2-143"><a href="#cb2-143" tabindex="-1"></a><span class="co">#&gt;     7 ~ case_when(wt &lt; 3.3264766 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-144"><a href="#cb2-144" tabindex="-1"></a><span class="co">#&gt;     3.0449898 | is.na(wt) ~ case_when(hp &lt; 143 | is.na(hp) ~ </span></span>
+<span id="cb2-145"><a href="#cb2-145" tabindex="-1"></a><span class="co">#&gt;     0.0067193983, .default = -0.009651031), .default = 0.04683964), </span></span>
+<span id="cb2-146"><a href="#cb2-146" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 3.4495685 ~ -0.02263298, .default = -0.036750525)), </span></span>
+<span id="cb2-147"><a href="#cb2-147" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 4.662758 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-148"><a href="#cb2-148" tabindex="-1"></a><span class="co">#&gt;         163.5 ~ case_when(wt &lt; 3.4723437 ~ -0.17039303, .default = -0.15526657), </span></span>
+<span id="cb2-149"><a href="#cb2-149" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 211.5 | is.na(hp) ~ case_when(wt &lt; </span></span>
+<span id="cb2-150"><a href="#cb2-150" tabindex="-1"></a><span class="co">#&gt;             3.7465625 ~ 0.0004972458, .default = -0.09755318), </span></span>
+<span id="cb2-151"><a href="#cb2-151" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(hp &lt; 255.5 ~ -0.15541798, .default = -0.11588805))), </span></span>
+<span id="cb2-152"><a href="#cb2-152" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 224.5 | is.na(hp) ~ -0.23941945, </span></span>
+<span id="cb2-153"><a href="#cb2-153" tabindex="-1"></a><span class="co">#&gt;             .default = -0.13318229)))) + case_when(cyl &lt; 5 ~ </span></span>
+<span id="cb2-154"><a href="#cb2-154" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2577705 | is.na(wt) ~ case_when(wt &lt; 1.8853853 ~ </span></span>
+<span id="cb2-155"><a href="#cb2-155" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 1.725376 ~ 0.17829448, .default = 0.23882514), </span></span>
+<span id="cb2-156"><a href="#cb2-156" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 2.169276 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-157"><a href="#cb2-157" tabindex="-1"></a><span class="co">#&gt;             2.039326 ~ 0.1246819, .default = 0.102199174), .default = 0.2128831)), </span></span>
+<span id="cb2-158"><a href="#cb2-158" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.1699717 ~ case_when(hp &lt; </span></span>
+<span id="cb2-159"><a href="#cb2-159" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.046856917, .default = case_when(wt &lt; 2.6247656 ~ </span></span>
+<span id="cb2-160"><a href="#cb2-160" tabindex="-1"></a><span class="co">#&gt;             0.024374198, .default = 0.034549255)), .default = 0.07452862)), </span></span>
+<span id="cb2-161"><a href="#cb2-161" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(cyl &lt; 7 ~ case_when(wt &lt; 3.3264766 | </span></span>
+<span id="cb2-162"><a href="#cb2-162" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(wt &lt; 3.0449898 | is.na(wt) ~ case_when(hp &lt; </span></span>
+<span id="cb2-163"><a href="#cb2-163" tabindex="-1"></a><span class="co">#&gt;         143 | is.na(hp) ~ 0.0047035217, .default = -0.0067556766), </span></span>
+<span id="cb2-164"><a href="#cb2-164" tabindex="-1"></a><span class="co">#&gt;         .default = 0.03278801), .default = case_when(wt &lt; 3.4495685 ~ </span></span>
+<span id="cb2-165"><a href="#cb2-165" tabindex="-1"></a><span class="co">#&gt;         -0.015843201, .default = -0.025725288)), .default = case_when(wt &lt; </span></span>
+<span id="cb2-166"><a href="#cb2-166" tabindex="-1"></a><span class="co">#&gt;         4.662758 | is.na(wt) ~ case_when(wt &lt; 3.8114195 | is.na(wt) ~ </span></span>
+<span id="cb2-167"><a href="#cb2-167" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.7512865 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-168"><a href="#cb2-168" tabindex="-1"></a><span class="co">#&gt;             3.651378 | is.na(wt) ~ -0.09137092, .default = 0.062277257), </span></span>
+<span id="cb2-169"><a href="#cb2-169" tabindex="-1"></a><span class="co">#&gt;             .default = -0.22441429), .default = case_when(hp &lt; </span></span>
+<span id="cb2-170"><a href="#cb2-170" tabindex="-1"></a><span class="co">#&gt;         177.5 ~ 0.067566834, .default = case_when(wt &lt; 3.955 ~ </span></span>
+<span id="cb2-171"><a href="#cb2-171" tabindex="-1"></a><span class="co">#&gt;         -0.12114578, .default = -0.04801414))), .default = case_when(hp &lt; </span></span>
+<span id="cb2-172"><a href="#cb2-172" tabindex="-1"></a><span class="co">#&gt;         224.5 | is.na(hp) ~ -0.16759375, .default = -0.09322752)))) + </span></span>
+<span id="cb2-173"><a href="#cb2-173" tabindex="-1"></a><span class="co">#&gt;     case_when(cyl &lt; 5 ~ case_when(wt &lt; 2.2577705 | is.na(wt) ~ </span></span>
+<span id="cb2-174"><a href="#cb2-174" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 1.8853853 ~ case_when(wt &lt; 1.725376 ~ </span></span>
+<span id="cb2-175"><a href="#cb2-175" tabindex="-1"></a><span class="co">#&gt;             0.12480595, .default = 0.16717711), .default = case_when(wt &lt; </span></span>
+<span id="cb2-176"><a href="#cb2-176" tabindex="-1"></a><span class="co">#&gt;             2.169276 | is.na(wt) ~ case_when(wt &lt; 2.039326 ~ </span></span>
+<span id="cb2-177"><a href="#cb2-177" tabindex="-1"></a><span class="co">#&gt;             0.08727746, .default = 0.071539305), .default = 0.14901821)), </span></span>
+<span id="cb2-178"><a href="#cb2-178" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.1699717 ~ case_when(hp &lt; </span></span>
+<span id="cb2-179"><a href="#cb2-179" tabindex="-1"></a><span class="co">#&gt;             96.5 ~ 0.032799568, .default = case_when(wt &lt; 2.6247656 ~ </span></span>
+<span id="cb2-180"><a href="#cb2-180" tabindex="-1"></a><span class="co">#&gt;             0.017061997, .default = 0.02418434)), .default = 0.0521703)), </span></span>
+<span id="cb2-181"><a href="#cb2-181" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(cyl &lt; 7 ~ case_when(wt &lt; 3.3264766 | </span></span>
+<span id="cb2-182"><a href="#cb2-182" tabindex="-1"></a><span class="co">#&gt;             is.na(wt) ~ case_when(wt &lt; 3.0449898 | is.na(wt) ~ </span></span>
+<span id="cb2-183"><a href="#cb2-183" tabindex="-1"></a><span class="co">#&gt;             case_when(hp &lt; 143 | is.na(hp) ~ 0.0032924651, .default = -0.0047289277), </span></span>
+<span id="cb2-184"><a href="#cb2-184" tabindex="-1"></a><span class="co">#&gt;             .default = 0.022951812), .default = case_when(wt &lt; </span></span>
+<span id="cb2-185"><a href="#cb2-185" tabindex="-1"></a><span class="co">#&gt;             3.4495685 ~ -0.01109047, .default = -0.018007964)), </span></span>
+<span id="cb2-186"><a href="#cb2-186" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 4.662758 | is.na(wt) ~ </span></span>
+<span id="cb2-187"><a href="#cb2-187" tabindex="-1"></a><span class="co">#&gt;                 case_when(wt &lt; 3.8114195 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb2-188"><a href="#cb2-188" tabindex="-1"></a><span class="co">#&gt;                   3.7512865 | is.na(wt) ~ case_when(wt &lt; 3.651378 | </span></span>
+<span id="cb2-189"><a href="#cb2-189" tabindex="-1"></a><span class="co">#&gt;                   is.na(wt) ~ -0.063959695, .default = 0.043594208), </span></span>
+<span id="cb2-190"><a href="#cb2-190" tabindex="-1"></a><span class="co">#&gt;                   .default = -0.15709013), .default = case_when(hp &lt; </span></span>
+<span id="cb2-191"><a href="#cb2-191" tabindex="-1"></a><span class="co">#&gt;                   177.5 ~ 0.04729706, .default = case_when(wt &lt; </span></span>
+<span id="cb2-192"><a href="#cb2-192" tabindex="-1"></a><span class="co">#&gt;                   3.955 ~ -0.08480192, .default = -0.03361004))), </span></span>
+<span id="cb2-193"><a href="#cb2-193" tabindex="-1"></a><span class="co">#&gt;                 .default = case_when(hp &lt; 224.5 | is.na(hp) ~ </span></span>
+<span id="cb2-194"><a href="#cb2-194" tabindex="-1"></a><span class="co">#&gt;                   -0.11731556, .default = -0.0652593)))))</span></span></code></pre></div>
+<p>From there, the Tidy Eval formula can be used anywhere it can be
+evaluated. <code>tidypredict</code> provides these paths:</p>
+<ul>
+<li>Use directly inside <code>dplyr</code>,
+<code>mutate(mtcars, !! tidypredict_fit(model))</code></li>
+<li>Use <code>tidypredict_sql(model, con)</code> to retrieve the SQL
+statement</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">tidypredict_sql</span>(model, dbplyr<span class="sc">::</span><span class="fu">simulate_dbi</span>())</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; &lt;SQL&gt; 20.090625 + ((((((((CASE</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 3.0928125 ELSE 4.1428123 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 2.1628125 ELSE 1.7728126 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; ELSE 3.6928124</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.81281245 ELSE 0.4228125 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; ELSE 1.2928125</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE WHEN (&quot;cyl&quot; &lt; 5.0) THEN 0.39281252 ELSE 0.3128125 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; ELSE -0.1171875</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.4771875 ELSE -0.5971875 </span><span class="re">END</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 164.0) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4846094) THEN -1.4671875 ELSE -1.3771875 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 177.5) THEN -0.3421875 ELSE -1.1371875 </span><span class="re">END</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -1.7371875 ELSE -2.0371876 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -1.2871876 ELSE -1.5271875 </span><span class="re">END</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -2.9071875 ELSE -1.6171875 </span><span class="re">END</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co"> + CASE</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 2.1649687 ELSE 2.8999689 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 1.513969 ELSE 1.2409687 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="co">#&gt; ELSE 2.5849686</span></span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-46"><a href="#cb3-46" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-47"><a href="#cb3-47" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-48"><a href="#cb3-48" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-49"><a href="#cb3-49" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-50"><a href="#cb3-50" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.568969 ELSE 0.29596883 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-51"><a href="#cb3-51" tabindex="-1"></a><span class="co">#&gt; ELSE 0.9049686</span></span>
+<span id="cb3-52"><a href="#cb3-52" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-53"><a href="#cb3-53" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-54"><a href="#cb3-54" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.0383594 OR (&quot;wt&quot; IS NULL)) THEN 0.210969 ELSE 0.298969 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-55"><a href="#cb3-55" tabindex="-1"></a><span class="co">#&gt; ELSE -0.08203148</span></span>
+<span id="cb3-56"><a href="#cb3-56" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-57"><a href="#cb3-57" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-58"><a href="#cb3-58" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.3340313 ELSE -0.41803104 </span><span class="re">END</span></span>
+<span id="cb3-59"><a href="#cb3-59" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-60"><a href="#cb3-60" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-61"><a href="#cb3-61" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-62"><a href="#cb3-62" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-63"><a href="#cb3-63" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 164.0) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4846094) THEN -1.0270313 ELSE -0.9640314 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-64"><a href="#cb3-64" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 177.5) THEN -0.23953135 ELSE -0.79603136 </span><span class="re">END</span></span>
+<span id="cb3-65"><a href="#cb3-65" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-66"><a href="#cb3-66" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-67"><a href="#cb3-67" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -1.2160312 ELSE -1.4260314 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-68"><a href="#cb3-68" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -0.9010315 ELSE -1.0690315 </span><span class="re">END</span></span>
+<span id="cb3-69"><a href="#cb3-69" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-70"><a href="#cb3-70" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-71"><a href="#cb3-71" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -2.035031 ELSE -1.1320314 </span><span class="re">END</span></span>
+<span id="cb3-72"><a href="#cb3-72" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-73"><a href="#cb3-73" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-74"><a href="#cb3-74" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-75"><a href="#cb3-75" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-76"><a href="#cb3-76" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 1.5154783 ELSE 2.0299783 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-77"><a href="#cb3-77" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-78"><a href="#cb3-78" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 1.0597781 ELSE 0.8686781 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-79"><a href="#cb3-79" tabindex="-1"></a><span class="co">#&gt; ELSE 1.8094782</span></span>
+<span id="cb3-80"><a href="#cb3-80" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-81"><a href="#cb3-81" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-82"><a href="#cb3-82" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-83"><a href="#cb3-83" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-84"><a href="#cb3-84" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-85"><a href="#cb3-85" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-86"><a href="#cb3-86" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.39827806 ELSE 0.20717812 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-87"><a href="#cb3-87" tabindex="-1"></a><span class="co">#&gt; ELSE 0.6334781</span></span>
+<span id="cb3-88"><a href="#cb3-88" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-89"><a href="#cb3-89" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-90"><a href="#cb3-90" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE WHEN (&quot;cyl&quot; &lt; 5.0) THEN 0.21167804 ELSE 0.1468781 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-91"><a href="#cb3-91" tabindex="-1"></a><span class="co">#&gt; ELSE -0.0574221</span></span>
+<span id="cb3-92"><a href="#cb3-92" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-93"><a href="#cb3-93" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-94"><a href="#cb3-94" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.23382169 ELSE -0.29262152 </span><span class="re">END</span></span>
+<span id="cb3-95"><a href="#cb3-95" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-96"><a href="#cb3-96" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-97"><a href="#cb3-97" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-98"><a href="#cb3-98" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-99"><a href="#cb3-99" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 164.0) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4846094) THEN -0.7189221 ELSE -0.67482203 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-100"><a href="#cb3-100" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 177.5) THEN -0.1676722 ELSE -0.5572218 </span><span class="re">END</span></span>
+<span id="cb3-101"><a href="#cb3-101" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-102"><a href="#cb3-102" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-103"><a href="#cb3-103" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -0.8512216 ELSE -0.9982221 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-104"><a href="#cb3-104" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -0.63072205 ELSE -0.7483223 </span><span class="re">END</span></span>
+<span id="cb3-105"><a href="#cb3-105" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-106"><a href="#cb3-106" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-107"><a href="#cb3-107" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -1.4245218 ELSE -0.7924223 </span><span class="re">END</span></span>
+<span id="cb3-108"><a href="#cb3-108" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-109"><a href="#cb3-109" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-110"><a href="#cb3-110" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-111"><a href="#cb3-111" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-112"><a href="#cb3-112" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 1.0608349 ELSE 1.420985 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-113"><a href="#cb3-113" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-114"><a href="#cb3-114" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 0.7418446 ELSE 0.60807496 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-115"><a href="#cb3-115" tabindex="-1"></a><span class="co">#&gt; ELSE 1.2666345</span></span>
+<span id="cb3-116"><a href="#cb3-116" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-117"><a href="#cb3-117" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-118"><a href="#cb3-118" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-119"><a href="#cb3-119" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-120"><a href="#cb3-120" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-121"><a href="#cb3-121" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-122"><a href="#cb3-122" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.2787949 ELSE 0.14502469 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-123"><a href="#cb3-123" tabindex="-1"></a><span class="co">#&gt; ELSE 0.44343463</span></span>
+<span id="cb3-124"><a href="#cb3-124" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-125"><a href="#cb3-125" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-126"><a href="#cb3-126" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-127"><a href="#cb3-127" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0383594 OR (&quot;wt&quot; IS NULL)) THEN 0.09713482</span></span>
+<span id="cb3-128"><a href="#cb3-128" tabindex="-1"></a><span class="co">#&gt; ELSE 0.16521503</span></span>
+<span id="cb3-129"><a href="#cb3-129" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-130"><a href="#cb3-130" tabindex="-1"></a><span class="co">#&gt; ELSE -0.040195312</span></span>
+<span id="cb3-131"><a href="#cb3-131" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-132"><a href="#cb3-132" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-133"><a href="#cb3-133" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.16367513 ELSE -0.20483504 </span><span class="re">END</span></span>
+<span id="cb3-134"><a href="#cb3-134" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-135"><a href="#cb3-135" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-136"><a href="#cb3-136" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-137"><a href="#cb3-137" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-138"><a href="#cb3-138" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 164.0) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4846094) THEN -0.5032456 ELSE -0.47237548 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-139"><a href="#cb3-139" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 177.5) THEN -0.11737026 ELSE -0.39005503 </span><span class="re">END</span></span>
+<span id="cb3-140"><a href="#cb3-140" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-141"><a href="#cb3-141" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-142"><a href="#cb3-142" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -0.5958553 ELSE -0.69875544 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-143"><a href="#cb3-143" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -0.4415054 ELSE -0.5238258 </span><span class="re">END</span></span>
+<span id="cb3-144"><a href="#cb3-144" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-145"><a href="#cb3-145" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-146"><a href="#cb3-146" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.9971653 ELSE -0.55469537 </span><span class="re">END</span></span>
+<span id="cb3-147"><a href="#cb3-147" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-148"><a href="#cb3-148" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-149"><a href="#cb3-149" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-150"><a href="#cb3-150" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-151"><a href="#cb3-151" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 0.74258435 ELSE 0.9946897 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-152"><a href="#cb3-152" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-153"><a href="#cb3-153" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 0.51929134 ELSE 0.42565268 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-154"><a href="#cb3-154" tabindex="-1"></a><span class="co">#&gt; ELSE 0.8866443</span></span>
+<span id="cb3-155"><a href="#cb3-155" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-156"><a href="#cb3-156" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-157"><a href="#cb3-157" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-158"><a href="#cb3-158" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-159"><a href="#cb3-159" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-160"><a href="#cb3-160" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-161"><a href="#cb3-161" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.19515634 ELSE 0.1015171 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-162"><a href="#cb3-162" tabindex="-1"></a><span class="co">#&gt; ELSE 0.3104045</span></span>
+<span id="cb3-163"><a href="#cb3-163" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-164"><a href="#cb3-164" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-165"><a href="#cb3-165" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE WHEN (&quot;cyl&quot; &lt; 5.0) THEN 0.11903412 ELSE 0.06686634 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-166"><a href="#cb3-166" tabindex="-1"></a><span class="co">#&gt; ELSE -0.028136672</span></span>
+<span id="cb3-167"><a href="#cb3-167" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-168"><a href="#cb3-168" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-169"><a href="#cb3-169" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.11457253 ELSE -0.1433843 </span><span class="re">END</span></span>
+<span id="cb3-170"><a href="#cb3-170" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-171"><a href="#cb3-171" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-172"><a href="#cb3-172" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-173"><a href="#cb3-173" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-174"><a href="#cb3-174" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.8098438 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-175"><a href="#cb3-175" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.7571313 OR (&quot;wt&quot; IS NULL)) THEN -0.20328303</span></span>
+<span id="cb3-176"><a href="#cb3-176" tabindex="-1"></a><span class="co">#&gt; ELSE -0.6030386</span></span>
+<span id="cb3-177"><a href="#cb3-177" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-178"><a href="#cb3-178" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.9561818) THEN -0.007159081 ELSE -0.24303864 </span><span class="re">END</span></span>
+<span id="cb3-179"><a href="#cb3-179" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-180"><a href="#cb3-180" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-181"><a href="#cb3-181" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -0.41709858 ELSE -0.48912886 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-182"><a href="#cb3-182" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -0.30905378 ELSE -0.36667785 </span><span class="re">END</span></span>
+<span id="cb3-183"><a href="#cb3-183" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-184"><a href="#cb3-184" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-185"><a href="#cb3-185" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.69801563 ELSE -0.3882868 </span><span class="re">END</span></span>
+<span id="cb3-186"><a href="#cb3-186" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-187"><a href="#cb3-187" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-188"><a href="#cb3-188" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-189"><a href="#cb3-189" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2596803) THEN (CASE</span></span>
+<span id="cb3-190"><a href="#cb3-190" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8848817) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.7250888) THEN 0.51980907 ELSE 0.69628274 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-191"><a href="#cb3-191" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-192"><a href="#cb3-192" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.1698422) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.0377436) THEN 0.36350405 ELSE 0.29795665 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-193"><a href="#cb3-193" tabindex="-1"></a><span class="co">#&gt; ELSE 0.620651</span></span>
+<span id="cb3-194"><a href="#cb3-194" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-195"><a href="#cb3-195" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-196"><a href="#cb3-196" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-197"><a href="#cb3-197" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-198"><a href="#cb3-198" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.326375 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-199"><a href="#cb3-199" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 102.5) THEN (CASE</span></span>
+<span id="cb3-200"><a href="#cb3-200" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1730468 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.1366095 ELSE 0.07106209 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-201"><a href="#cb3-201" tabindex="-1"></a><span class="co">#&gt; ELSE 0.21728335</span></span>
+<span id="cb3-202"><a href="#cb3-202" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-203"><a href="#cb3-203" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-204"><a href="#cb3-204" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 141.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-205"><a href="#cb3-205" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0383594 OR (&quot;wt&quot; IS NULL)) THEN 0.04271759</span></span>
+<span id="cb3-206"><a href="#cb3-206" tabindex="-1"></a><span class="co">#&gt; ELSE 0.0955909</span></span>
+<span id="cb3-207"><a href="#cb3-207" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-208"><a href="#cb3-208" tabindex="-1"></a><span class="co">#&gt; ELSE -0.01969551</span></span>
+<span id="cb3-209"><a href="#cb3-209" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-210"><a href="#cb3-210" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-211"><a href="#cb3-211" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495606) THEN -0.08020077 ELSE -0.100368805 </span><span class="re">END</span></span>
+<span id="cb3-212"><a href="#cb3-212" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-213"><a href="#cb3-213" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-214"><a href="#cb3-214" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.660125 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-215"><a href="#cb3-215" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-216"><a href="#cb3-216" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 164.0) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4846094) THEN -0.2912867 ELSE -0.26967773 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-217"><a href="#cb3-217" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.7525) THEN -0.004113865 ELSE -0.19908859 </span><span class="re">END</span></span>
+<span id="cb3-218"><a href="#cb3-218" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-219"><a href="#cb3-219" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-220"><a href="#cb3-220" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 254.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7039063) THEN -0.29196888 ELSE -0.34239012 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-221"><a href="#cb3-221" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.379375) THEN -0.21633774 ELSE -0.25667438 </span><span class="re">END</span></span>
+<span id="cb3-222"><a href="#cb3-222" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-223"><a href="#cb3-223" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-224"><a href="#cb3-224" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.4886111 ELSE -0.27180085 </span><span class="re">END</span></span>
+<span id="cb3-225"><a href="#cb3-225" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-226"><a href="#cb3-226" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-227"><a href="#cb3-227" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-228"><a href="#cb3-228" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 5.0) THEN (CASE</span></span>
+<span id="cb3-229"><a href="#cb3-229" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2577705 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-230"><a href="#cb3-230" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8853853) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.725376) THEN 0.36386615 ELSE 0.48739767 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-231"><a href="#cb3-231" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-232"><a href="#cb3-232" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.169276 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.039326) THEN 0.25445274 ELSE 0.20856972 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-233"><a href="#cb3-233" tabindex="-1"></a><span class="co">#&gt; ELSE 0.4344556</span></span>
+<span id="cb3-234"><a href="#cb3-234" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-235"><a href="#cb3-235" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-236"><a href="#cb3-236" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-237"><a href="#cb3-237" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1699717) THEN (CASE</span></span>
+<span id="cb3-238"><a href="#cb3-238" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.09562649</span></span>
+<span id="cb3-239"><a href="#cb3-239" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 2.6247656) THEN 0.049743462 ELSE 0.07050888 </span><span class="re">END</span></span>
+<span id="cb3-240"><a href="#cb3-240" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-241"><a href="#cb3-241" tabindex="-1"></a><span class="co">#&gt; ELSE 0.15209839</span></span>
+<span id="cb3-242"><a href="#cb3-242" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-243"><a href="#cb3-243" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-244"><a href="#cb3-244" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-245"><a href="#cb3-245" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 193.0 OR (&quot;hp&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-246"><a href="#cb3-246" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.3264766) THEN (CASE</span></span>
+<span id="cb3-247"><a href="#cb3-247" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0449898) THEN (CASE</span></span>
+<span id="cb3-248"><a href="#cb3-248" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 143.0 OR (&quot;hp&quot; IS NULL)) THEN 0.009599304</span></span>
+<span id="cb3-249"><a href="#cb3-249" tabindex="-1"></a><span class="co">#&gt; ELSE -0.013786927</span></span>
+<span id="cb3-250"><a href="#cb3-250" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-251"><a href="#cb3-251" tabindex="-1"></a><span class="co">#&gt; ELSE 0.066913724</span></span>
+<span id="cb3-252"><a href="#cb3-252" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-253"><a href="#cb3-253" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-254"><a href="#cb3-254" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.8144138 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-255"><a href="#cb3-255" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.7551303 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-256"><a href="#cb3-256" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.6250772 OR (&quot;wt&quot; IS NULL)) THEN -0.11169243</span></span>
+<span id="cb3-257"><a href="#cb3-257" tabindex="-1"></a><span class="co">#&gt; ELSE 0.0891806</span></span>
+<span id="cb3-258"><a href="#cb3-258" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-259"><a href="#cb3-259" tabindex="-1"></a><span class="co">#&gt; ELSE -0.36240026</span></span>
+<span id="cb3-260"><a href="#cb3-260" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-261"><a href="#cb3-261" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.9561841) THEN 0.05471512 ELSE -0.11040047 </span><span class="re">END</span></span>
+<span id="cb3-262"><a href="#cb3-262" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-263"><a href="#cb3-263" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-264"><a href="#cb3-264" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-265"><a href="#cb3-265" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 222.5) THEN -0.34202775</span></span>
+<span id="cb3-266"><a href="#cb3-266" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-267"><a href="#cb3-267" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 253.5) THEN (CASE</span></span>
+<span id="cb3-268"><a href="#cb3-268" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 238.0) THEN -0.19026054</span></span>
+<span id="cb3-269"><a href="#cb3-269" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.7086718) THEN -0.20437808 ELSE -0.2396731 </span><span class="re">END</span></span>
+<span id="cb3-270"><a href="#cb3-270" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-271"><a href="#cb3-271" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.3739061) THEN -0.15143657 ELSE -0.17967196 </span><span class="re">END</span></span>
+<span id="cb3-272"><a href="#cb3-272" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-273"><a href="#cb3-273" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-274"><a href="#cb3-274" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-275"><a href="#cb3-275" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-276"><a href="#cb3-276" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 5.0) THEN (CASE</span></span>
+<span id="cb3-277"><a href="#cb3-277" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2577705 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-278"><a href="#cb3-278" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8853853) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.725376) THEN 0.2547061 ELSE 0.3411788 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-279"><a href="#cb3-279" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-280"><a href="#cb3-280" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.169276 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.039326) THEN 0.17811665 ELSE 0.14599857 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-281"><a href="#cb3-281" tabindex="-1"></a><span class="co">#&gt; ELSE 0.30411884</span></span>
+<span id="cb3-282"><a href="#cb3-282" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-283"><a href="#cb3-283" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-284"><a href="#cb3-284" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-285"><a href="#cb3-285" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1699717) THEN (CASE</span></span>
+<span id="cb3-286"><a href="#cb3-286" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.06693844</span></span>
+<span id="cb3-287"><a href="#cb3-287" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 2.6247656) THEN 0.034820367 ELSE 0.049356196 </span><span class="re">END</span></span>
+<span id="cb3-288"><a href="#cb3-288" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-289"><a href="#cb3-289" tabindex="-1"></a><span class="co">#&gt; ELSE 0.10646908</span></span>
+<span id="cb3-290"><a href="#cb3-290" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-291"><a href="#cb3-291" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-292"><a href="#cb3-292" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-293"><a href="#cb3-293" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-294"><a href="#cb3-294" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.3264766 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-295"><a href="#cb3-295" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0449898 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-296"><a href="#cb3-296" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 143.0 OR (&quot;hp&quot; IS NULL)) THEN 0.0067193983</span></span>
+<span id="cb3-297"><a href="#cb3-297" tabindex="-1"></a><span class="co">#&gt; ELSE -0.009651031</span></span>
+<span id="cb3-298"><a href="#cb3-298" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-299"><a href="#cb3-299" tabindex="-1"></a><span class="co">#&gt; ELSE 0.04683964</span></span>
+<span id="cb3-300"><a href="#cb3-300" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-301"><a href="#cb3-301" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495685) THEN -0.02263298 ELSE -0.036750525 </span><span class="re">END</span></span>
+<span id="cb3-302"><a href="#cb3-302" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-303"><a href="#cb3-303" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-304"><a href="#cb3-304" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.662758 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-305"><a href="#cb3-305" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 163.5) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.4723437) THEN -0.17039303 ELSE -0.15526657 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-306"><a href="#cb3-306" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-307"><a href="#cb3-307" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 211.5 OR (&quot;hp&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 3.7465625) THEN 0.0004972458 ELSE -0.09755318 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-308"><a href="#cb3-308" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 255.5) THEN -0.15541798 ELSE -0.11588805 </span><span class="re">END</span></span>
+<span id="cb3-309"><a href="#cb3-309" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-310"><a href="#cb3-310" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-311"><a href="#cb3-311" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.23941945 ELSE -0.13318229 </span><span class="re">END</span></span>
+<span id="cb3-312"><a href="#cb3-312" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-313"><a href="#cb3-313" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-314"><a href="#cb3-314" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-315"><a href="#cb3-315" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 5.0) THEN (CASE</span></span>
+<span id="cb3-316"><a href="#cb3-316" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2577705 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-317"><a href="#cb3-317" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8853853) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.725376) THEN 0.17829448 ELSE 0.23882514 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-318"><a href="#cb3-318" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-319"><a href="#cb3-319" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.169276 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.039326) THEN 0.1246819 ELSE 0.102199174 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-320"><a href="#cb3-320" tabindex="-1"></a><span class="co">#&gt; ELSE 0.2128831</span></span>
+<span id="cb3-321"><a href="#cb3-321" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-322"><a href="#cb3-322" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-323"><a href="#cb3-323" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-324"><a href="#cb3-324" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1699717) THEN (CASE</span></span>
+<span id="cb3-325"><a href="#cb3-325" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.046856917</span></span>
+<span id="cb3-326"><a href="#cb3-326" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 2.6247656) THEN 0.024374198 ELSE 0.034549255 </span><span class="re">END</span></span>
+<span id="cb3-327"><a href="#cb3-327" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-328"><a href="#cb3-328" tabindex="-1"></a><span class="co">#&gt; ELSE 0.07452862</span></span>
+<span id="cb3-329"><a href="#cb3-329" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-330"><a href="#cb3-330" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-331"><a href="#cb3-331" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-332"><a href="#cb3-332" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-333"><a href="#cb3-333" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.3264766 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-334"><a href="#cb3-334" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0449898 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-335"><a href="#cb3-335" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 143.0 OR (&quot;hp&quot; IS NULL)) THEN 0.0047035217</span></span>
+<span id="cb3-336"><a href="#cb3-336" tabindex="-1"></a><span class="co">#&gt; ELSE -0.0067556766</span></span>
+<span id="cb3-337"><a href="#cb3-337" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-338"><a href="#cb3-338" tabindex="-1"></a><span class="co">#&gt; ELSE 0.03278801</span></span>
+<span id="cb3-339"><a href="#cb3-339" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-340"><a href="#cb3-340" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495685) THEN -0.015843201 ELSE -0.025725288 </span><span class="re">END</span></span>
+<span id="cb3-341"><a href="#cb3-341" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-342"><a href="#cb3-342" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-343"><a href="#cb3-343" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.662758 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-344"><a href="#cb3-344" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.8114195 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-345"><a href="#cb3-345" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.7512865 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-346"><a href="#cb3-346" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.651378 OR (&quot;wt&quot; IS NULL)) THEN -0.09137092</span></span>
+<span id="cb3-347"><a href="#cb3-347" tabindex="-1"></a><span class="co">#&gt; ELSE 0.062277257</span></span>
+<span id="cb3-348"><a href="#cb3-348" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-349"><a href="#cb3-349" tabindex="-1"></a><span class="co">#&gt; ELSE -0.22441429</span></span>
+<span id="cb3-350"><a href="#cb3-350" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-351"><a href="#cb3-351" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-352"><a href="#cb3-352" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 177.5) THEN 0.067566834</span></span>
+<span id="cb3-353"><a href="#cb3-353" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.955) THEN -0.12114578 ELSE -0.04801414 </span><span class="re">END</span></span>
+<span id="cb3-354"><a href="#cb3-354" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-355"><a href="#cb3-355" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-356"><a href="#cb3-356" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.16759375 ELSE -0.09322752 </span><span class="re">END</span></span>
+<span id="cb3-357"><a href="#cb3-357" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-358"><a href="#cb3-358" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-359"><a href="#cb3-359" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">) + CASE</span></span>
+<span id="cb3-360"><a href="#cb3-360" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 5.0) THEN (CASE</span></span>
+<span id="cb3-361"><a href="#cb3-361" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.2577705 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-362"><a href="#cb3-362" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 1.8853853) THEN (CASE WHEN (&quot;wt&quot; &lt; 1.725376) THEN 0.12480595 ELSE 0.16717711 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-363"><a href="#cb3-363" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-364"><a href="#cb3-364" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 2.169276 OR (&quot;wt&quot; IS NULL)) THEN (CASE WHEN (&quot;wt&quot; &lt; 2.039326) THEN 0.08727746 ELSE 0.071539305 </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-365"><a href="#cb3-365" tabindex="-1"></a><span class="co">#&gt; ELSE 0.14901821</span></span>
+<span id="cb3-366"><a href="#cb3-366" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-367"><a href="#cb3-367" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-368"><a href="#cb3-368" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-369"><a href="#cb3-369" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.1699717) THEN (CASE</span></span>
+<span id="cb3-370"><a href="#cb3-370" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 96.5) THEN 0.032799568</span></span>
+<span id="cb3-371"><a href="#cb3-371" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 2.6247656) THEN 0.017061997 ELSE 0.02418434 </span><span class="re">END</span></span>
+<span id="cb3-372"><a href="#cb3-372" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-373"><a href="#cb3-373" tabindex="-1"></a><span class="co">#&gt; ELSE 0.0521703</span></span>
+<span id="cb3-374"><a href="#cb3-374" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-375"><a href="#cb3-375" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-376"><a href="#cb3-376" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-377"><a href="#cb3-377" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;cyl&quot; &lt; 7.0) THEN (CASE</span></span>
+<span id="cb3-378"><a href="#cb3-378" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.3264766 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-379"><a href="#cb3-379" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.0449898 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-380"><a href="#cb3-380" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 143.0 OR (&quot;hp&quot; IS NULL)) THEN 0.0032924651</span></span>
+<span id="cb3-381"><a href="#cb3-381" tabindex="-1"></a><span class="co">#&gt; ELSE -0.0047289277</span></span>
+<span id="cb3-382"><a href="#cb3-382" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-383"><a href="#cb3-383" tabindex="-1"></a><span class="co">#&gt; ELSE 0.022951812</span></span>
+<span id="cb3-384"><a href="#cb3-384" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-385"><a href="#cb3-385" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.4495685) THEN -0.01109047 ELSE -0.018007964 </span><span class="re">END</span></span>
+<span id="cb3-386"><a href="#cb3-386" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-387"><a href="#cb3-387" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-388"><a href="#cb3-388" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 4.662758 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-389"><a href="#cb3-389" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.8114195 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-390"><a href="#cb3-390" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.7512865 OR (&quot;wt&quot; IS NULL)) THEN (CASE</span></span>
+<span id="cb3-391"><a href="#cb3-391" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;wt&quot; &lt; 3.651378 OR (&quot;wt&quot; IS NULL)) THEN -0.063959695</span></span>
+<span id="cb3-392"><a href="#cb3-392" tabindex="-1"></a><span class="co">#&gt; ELSE 0.043594208</span></span>
+<span id="cb3-393"><a href="#cb3-393" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-394"><a href="#cb3-394" tabindex="-1"></a><span class="co">#&gt; ELSE -0.15709013</span></span>
+<span id="cb3-395"><a href="#cb3-395" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-396"><a href="#cb3-396" tabindex="-1"></a><span class="co">#&gt; ELSE CASE</span></span>
+<span id="cb3-397"><a href="#cb3-397" tabindex="-1"></a><span class="co">#&gt; WHEN (&quot;hp&quot; &lt; 177.5) THEN 0.04729706</span></span>
+<span id="cb3-398"><a href="#cb3-398" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;wt&quot; &lt; 3.955) THEN -0.08480192 ELSE -0.03361004 </span><span class="re">END</span></span>
+<span id="cb3-399"><a href="#cb3-399" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-400"><a href="#cb3-400" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span><span class="co">)</span></span>
+<span id="cb3-401"><a href="#cb3-401" tabindex="-1"></a><span class="co">#&gt; ELSE CASE WHEN (&quot;hp&quot; &lt; 224.5 OR (&quot;hp&quot; IS NULL)) THEN -0.11731556 ELSE -0.0652593 </span><span class="re">END</span></span>
+<span id="cb3-402"><a href="#cb3-402" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-403"><a href="#cb3-403" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span>
+<span id="cb3-404"><a href="#cb3-404" tabindex="-1"></a><span class="co">#&gt; </span><span class="re">END</span></span></code></pre></div>
+</div>
+<div id="categorical-predictors" class="section level2">
+<h2>Categorical predictors</h2>
+<p>H2O handles categorical predictors natively. The generated formula
+uses <code>%in%</code> for categorical splits.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>mtcars2 <span class="ot">&lt;-</span> mtcars</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>mtcars2<span class="sc">$</span>cyl <span class="ot">&lt;-</span> <span class="fu">factor</span>(mtcars2<span class="sc">$</span>cyl)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>mtcars2<span class="sc">$</span>gear <span class="ot">&lt;-</span> <span class="fu">factor</span>(mtcars2<span class="sc">$</span>gear)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>model_cat <span class="ot">&lt;-</span> <span class="fu">boost_tree</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>, <span class="at">trees =</span> <span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;h2o_gbm&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> cyl <span class="sc">+</span> gear <span class="sc">+</span> wt, <span class="at">data =</span> mtcars2)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model_cat)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; 20.090625 + (case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 1.7250888 ~ 3.0928125, .default = 4.1428123), </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 2.1698422 ~ case_when(gear %in% </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;         c(&quot;3&quot;, &quot;5&quot;) ~ 1.7728126, .default = 2.1628125), .default = 3.6928124)), </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(cyl %in% &quot;8&quot; | is.na(cyl) ~ case_when(wt &lt; </span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;         4.6576414 | is.na(wt) ~ case_when(wt &lt; 3.8440876 | is.na(wt) ~ </span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.8072233 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;             3.478655 ~ -1.0571876, .default = -1.3891875), .default = -2.0371876), </span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.957044 ~ -0.2671875, .default = -1.1071875)), </span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 5.2952757 ~ -2.9071875, .default = case_when(wt &lt; </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;             5.383774 ~ -1.6171875, .default = -2.9071875))), </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.3288743 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;             &quot;6&quot; ~ case_when(gear %in% &quot;5&quot; ~ -0.1171875, .default = case_when(gear %in% </span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;             &quot;4&quot; | is.na(gear) ~ 0.27281252, .default = 0.39281252)), </span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.1712377 | is.na(wt) ~ </span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt;                 case_when(wt &lt; 2.3998036 ~ 0.81281245, .default = 0.54281247), </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt;                 .default = 1.2928125)), .default = case_when(gear %in% </span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;             c(&quot;3&quot;, &quot;5&quot;) ~ -0.5971875, .default = -0.4771875)))) + </span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 2.1649687, .default = 2.8999689), .default = case_when(wt &lt; </span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 1.2409687, </span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt;         .default = 1.513969), .default = 2.5849686)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; | is.na(cyl) ~ case_when(wt &lt; 4.6576414 | is.na(wt) ~ </span></span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.8440876 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a><span class="co">#&gt;             3.8072233 | is.na(wt) ~ case_when(wt &lt; 3.478655 ~ </span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a><span class="co">#&gt;             -0.7400313, .default = -0.97243106), .default = -1.4260314), </span></span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.957044 ~ -0.18703103, </span></span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.775031)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a><span class="co">#&gt;         5.2952757 ~ -2.035031, .default = case_when(wt &lt; 5.383774 ~ </span></span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a><span class="co">#&gt;         -1.1320314, .default = -2.035031))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a><span class="co">#&gt;         3.3288743 | is.na(wt) ~ case_when(cyl %in% &quot;6&quot; ~ case_when(gear %in% </span></span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a><span class="co">#&gt;         &quot;5&quot; ~ -0.08203148, .default = case_when(gear %in% &quot;4&quot; | </span></span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a><span class="co">#&gt;         is.na(gear) ~ 0.1909687, .default = 0.274969)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a><span class="co">#&gt;         2.96631 | is.na(wt) ~ case_when(wt &lt; 2.4007888 ~ 0.568969, </span></span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a><span class="co">#&gt;         .default = 0.24496856), .default = case_when(wt &lt; 3.169029 ~ </span></span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a><span class="co">#&gt;         0.64996856, .default = 0.9049686))), .default = case_when(gear %in% </span></span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a><span class="co">#&gt;         c(&quot;3&quot;, &quot;5&quot;) ~ -0.41803104, .default = -0.3340313)))) + </span></span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 1.5154783, .default = 2.0299783), .default = case_when(wt &lt; </span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.8686781, </span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a><span class="co">#&gt;         .default = 1.0597781), .default = 1.8094782)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; | is.na(cyl) ~ case_when(wt &lt; 4.6576414 | is.na(wt) ~ </span></span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.8440876 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a><span class="co">#&gt;             3.8072233 | is.na(wt) ~ case_when(wt &lt; 3.657874 | </span></span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a><span class="co">#&gt;             is.na(wt) ~ -0.6783617, .default = -0.44370174), </span></span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a><span class="co">#&gt;             .default = -0.9982221), .default = case_when(wt &lt; </span></span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a><span class="co">#&gt;             3.957044 ~ -0.13092178, .default = -0.54252195)), </span></span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 5.2952757 ~ -1.4245218, .default = case_when(wt &lt; </span></span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a><span class="co">#&gt;             5.383774 ~ -0.7924223, .default = -1.4245218))), </span></span>
+<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.3288743 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-60"><a href="#cb4-60" tabindex="-1"></a><span class="co">#&gt;             &quot;6&quot; ~ case_when(gear %in% &quot;5&quot; ~ -0.0574221, .default = case_when(gear %in% </span></span>
+<span id="cb4-61"><a href="#cb4-61" tabindex="-1"></a><span class="co">#&gt;             &quot;4&quot; | is.na(gear) ~ 0.13367787, .default = 0.19247828)), </span></span>
+<span id="cb4-62"><a href="#cb4-62" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 2.96631 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-63"><a href="#cb4-63" tabindex="-1"></a><span class="co">#&gt;                 2.4007888 ~ 0.39827806, .default = 0.17147803), </span></span>
+<span id="cb4-64"><a href="#cb4-64" tabindex="-1"></a><span class="co">#&gt;                 .default = case_when(wt &lt; 3.169029 ~ 0.4549778, </span></span>
+<span id="cb4-65"><a href="#cb4-65" tabindex="-1"></a><span class="co">#&gt;                   .default = 0.6334781))), .default = case_when(gear %in% </span></span>
+<span id="cb4-66"><a href="#cb4-66" tabindex="-1"></a><span class="co">#&gt;             c(&quot;3&quot;, &quot;5&quot;) ~ -0.29262152, .default = -0.23382169)))) + </span></span>
+<span id="cb4-67"><a href="#cb4-67" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-68"><a href="#cb4-68" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 1.0608349, .default = 1.420985), .default = case_when(wt &lt; </span></span>
+<span id="cb4-69"><a href="#cb4-69" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.60807496, </span></span>
+<span id="cb4-70"><a href="#cb4-70" tabindex="-1"></a><span class="co">#&gt;         .default = 0.7418446), .default = 1.2666345)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-71"><a href="#cb4-71" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; | is.na(cyl) ~ case_when(wt &lt; 4.6576414 | is.na(wt) ~ </span></span>
+<span id="cb4-72"><a href="#cb4-72" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.4373105 ~ case_when(gear %in% c(&quot;3&quot;, </span></span>
+<span id="cb4-73"><a href="#cb4-73" tabindex="-1"></a><span class="co">#&gt;         &quot;4&quot;) ~ -0.72451305, .default = -0.5445131), .default = case_when(wt &lt; </span></span>
+<span id="cb4-74"><a href="#cb4-74" tabindex="-1"></a><span class="co">#&gt;             3.4817965 ~ 0.32548693, .default = case_when(wt &lt; </span></span>
+<span id="cb4-75"><a href="#cb4-75" tabindex="-1"></a><span class="co">#&gt;             3.6472287 ~ -0.63519317, .default = -0.35826975))), </span></span>
+<span id="cb4-76"><a href="#cb4-76" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 5.2952757 ~ -0.9971653, .default = case_when(wt &lt; </span></span>
+<span id="cb4-77"><a href="#cb4-77" tabindex="-1"></a><span class="co">#&gt;             5.383774 ~ -0.55469537, .default = -0.9971653))), </span></span>
+<span id="cb4-78"><a href="#cb4-78" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.3288743 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-79"><a href="#cb4-79" tabindex="-1"></a><span class="co">#&gt;             &quot;6&quot; ~ case_when(gear %in% &quot;5&quot; ~ -0.040195312, .default = case_when(gear %in% </span></span>
+<span id="cb4-80"><a href="#cb4-80" tabindex="-1"></a><span class="co">#&gt;             &quot;4&quot; | is.na(gear) ~ 0.09357433, .default = 0.13473484)), </span></span>
+<span id="cb4-81"><a href="#cb4-81" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 2.96631 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-82"><a href="#cb4-82" tabindex="-1"></a><span class="co">#&gt;                 2.4007888 ~ 0.2787949, .default = 0.12003456), </span></span>
+<span id="cb4-83"><a href="#cb4-83" tabindex="-1"></a><span class="co">#&gt;                 .default = case_when(wt &lt; 3.169029 ~ 0.31848472, </span></span>
+<span id="cb4-84"><a href="#cb4-84" tabindex="-1"></a><span class="co">#&gt;                   .default = 0.44343463))), .default = case_when(gear %in% </span></span>
+<span id="cb4-85"><a href="#cb4-85" tabindex="-1"></a><span class="co">#&gt;             c(&quot;3&quot;, &quot;5&quot;) ~ -0.20483504, .default = -0.16367513)))) + </span></span>
+<span id="cb4-86"><a href="#cb4-86" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-87"><a href="#cb4-87" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.74258435, .default = 0.9946897), .default = case_when(wt &lt; </span></span>
+<span id="cb4-88"><a href="#cb4-88" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.42565268, </span></span>
+<span id="cb4-89"><a href="#cb4-89" tabindex="-1"></a><span class="co">#&gt;         .default = 0.51929134), .default = 0.8866443)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-90"><a href="#cb4-90" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; | is.na(cyl) ~ case_when(wt &lt; 4.6576414 | is.na(wt) ~ </span></span>
+<span id="cb4-91"><a href="#cb4-91" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.8440876 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-92"><a href="#cb4-92" tabindex="-1"></a><span class="co">#&gt;             3.7545602 | is.na(wt) ~ case_when(wt &lt; 3.6449552 | </span></span>
+<span id="cb4-93"><a href="#cb4-93" tabindex="-1"></a><span class="co">#&gt;             is.na(wt) ~ -0.33239716, .default = 0.11188969), </span></span>
+<span id="cb4-94"><a href="#cb4-94" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.8092952 ~ -0.5181103, </span></span>
+<span id="cb4-95"><a href="#cb4-95" tabindex="-1"></a><span class="co">#&gt;                 .default = -0.5912745)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-96"><a href="#cb4-96" tabindex="-1"></a><span class="co">#&gt;             3.957044 ~ 0.015836105, .default = -0.27228403)), </span></span>
+<span id="cb4-97"><a href="#cb4-97" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 5.2952757 ~ -0.69801563, .default = case_when(wt &lt; </span></span>
+<span id="cb4-98"><a href="#cb4-98" tabindex="-1"></a><span class="co">#&gt;             5.383774 ~ -0.3882868, .default = -0.69801563))), </span></span>
+<span id="cb4-99"><a href="#cb4-99" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.3288743 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-100"><a href="#cb4-100" tabindex="-1"></a><span class="co">#&gt;             &quot;6&quot; ~ case_when(gear %in% &quot;5&quot; ~ -0.028136672, .default = case_when(gear %in% </span></span>
+<span id="cb4-101"><a href="#cb4-101" tabindex="-1"></a><span class="co">#&gt;             &quot;4&quot; | is.na(gear) ~ 0.06550197, .default = 0.09431431)), </span></span>
+<span id="cb4-102"><a href="#cb4-102" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 2.96631 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-103"><a href="#cb4-103" tabindex="-1"></a><span class="co">#&gt;                 2.4007888 ~ 0.19515634, .default = 0.08402401), </span></span>
+<span id="cb4-104"><a href="#cb4-104" tabindex="-1"></a><span class="co">#&gt;                 .default = case_when(wt &lt; 3.169029 ~ 0.22293915, </span></span>
+<span id="cb4-105"><a href="#cb4-105" tabindex="-1"></a><span class="co">#&gt;                   .default = 0.3104045))), .default = case_when(gear %in% </span></span>
+<span id="cb4-106"><a href="#cb4-106" tabindex="-1"></a><span class="co">#&gt;             c(&quot;3&quot;, &quot;5&quot;) ~ -0.1433843, .default = -0.11457253)))) + </span></span>
+<span id="cb4-107"><a href="#cb4-107" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-108"><a href="#cb4-108" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.51980907, .default = 0.69628274), .default = case_when(wt &lt; </span></span>
+<span id="cb4-109"><a href="#cb4-109" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.29795665, </span></span>
+<span id="cb4-110"><a href="#cb4-110" tabindex="-1"></a><span class="co">#&gt;         .default = 0.36350405), .default = 0.620651)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-111"><a href="#cb4-111" tabindex="-1"></a><span class="co">#&gt;         3.4895623 | is.na(wt) ~ case_when(cyl %in% c(&quot;6&quot;, &quot;8&quot;</span></span>
+<span id="cb4-112"><a href="#cb4-112" tabindex="-1"></a><span class="co">#&gt;     ) | is.na(cyl) ~ case_when(gear %in% &quot;5&quot; ~ case_when(cyl %in% </span></span>
+<span id="cb4-113"><a href="#cb4-113" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; ~ -0.28143975, .default = -0.01969551), .default = case_when(wt &lt; </span></span>
+<span id="cb4-114"><a href="#cb4-114" tabindex="-1"></a><span class="co">#&gt;         3.3250926 ~ case_when(gear %in% &quot;4&quot; | is.na(gear) ~ 0.045851327, </span></span>
+<span id="cb4-115"><a href="#cb4-115" tabindex="-1"></a><span class="co">#&gt;         .default = 0.06601994), .default = case_when(wt &lt; 3.4389207 ~ </span></span>
+<span id="cb4-116"><a href="#cb4-116" tabindex="-1"></a><span class="co">#&gt;         -0.40743965, .default = 0.01669742))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-117"><a href="#cb4-117" tabindex="-1"></a><span class="co">#&gt;         2.964173 | is.na(wt) ~ case_when(wt &lt; 2.395489 ~ 0.1366095, </span></span>
+<span id="cb4-118"><a href="#cb4-118" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) ~ 0.043816682, </span></span>
+<span id="cb4-119"><a href="#cb4-119" tabindex="-1"></a><span class="co">#&gt;             .default = 0.07381668)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-120"><a href="#cb4-120" tabindex="-1"></a><span class="co">#&gt;         3.1688287 ~ 0.1560576, .default = 0.21728335))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-121"><a href="#cb4-121" tabindex="-1"></a><span class="co">#&gt;         4.657026 ~ case_when(wt &lt; 3.6488037 ~ case_when(wt &lt; </span></span>
+<span id="cb4-122"><a href="#cb4-122" tabindex="-1"></a><span class="co">#&gt;         3.545157 ~ -0.17491607, .default = case_when(gear %in% </span></span>
+<span id="cb4-123"><a href="#cb4-123" tabindex="-1"></a><span class="co">#&gt;         c(&quot;3&quot;, &quot;4&quot;) ~ -0.5349161, .default = -0.32491606)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-124"><a href="#cb4-124" tabindex="-1"></a><span class="co">#&gt;         3.7541027 ~ 0.07832302, .default = case_when(wt &lt; 3.842949 ~ </span></span>
+<span id="cb4-125"><a href="#cb4-125" tabindex="-1"></a><span class="co">#&gt;         -0.38828474, .default = -0.08975693))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-126"><a href="#cb4-126" tabindex="-1"></a><span class="co">#&gt;         5.295172 ~ -0.4886111, .default = case_when(wt &lt; 5.3837414 ~ </span></span>
+<span id="cb4-127"><a href="#cb4-127" tabindex="-1"></a><span class="co">#&gt;         -0.27180085, .default = -0.4886111))))) + case_when(wt &lt; </span></span>
+<span id="cb4-128"><a href="#cb4-128" tabindex="-1"></a><span class="co">#&gt;     2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; 1.7250888 ~ </span></span>
+<span id="cb4-129"><a href="#cb4-129" tabindex="-1"></a><span class="co">#&gt;     0.36386615, .default = 0.48739767), .default = case_when(wt &lt; </span></span>
+<span id="cb4-130"><a href="#cb4-130" tabindex="-1"></a><span class="co">#&gt;     2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.20856972, </span></span>
+<span id="cb4-131"><a href="#cb4-131" tabindex="-1"></a><span class="co">#&gt;     .default = 0.25445274), .default = 0.4344556)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-132"><a href="#cb4-132" tabindex="-1"></a><span class="co">#&gt;     3.4493904 | is.na(wt) ~ case_when(cyl %in% c(&quot;6&quot;, &quot;8&quot;) | </span></span>
+<span id="cb4-133"><a href="#cb4-133" tabindex="-1"></a><span class="co">#&gt;     is.na(cyl) ~ case_when(gear %in% &quot;5&quot; ~ case_when(cyl %in% </span></span>
+<span id="cb4-134"><a href="#cb4-134" tabindex="-1"></a><span class="co">#&gt;     &quot;8&quot; ~ -0.19700809, .default = -0.013786927), .default = case_when(wt &lt; </span></span>
+<span id="cb4-135"><a href="#cb4-135" tabindex="-1"></a><span class="co">#&gt;     3.3258634 ~ case_when(gear %in% &quot;4&quot; | is.na(gear) ~ 0.0320961, </span></span>
+<span id="cb4-136"><a href="#cb4-136" tabindex="-1"></a><span class="co">#&gt;     .default = 0.04621422), .default = case_when(wt &lt; 3.4364333 ~ </span></span>
+<span id="cb4-137"><a href="#cb4-137" tabindex="-1"></a><span class="co">#&gt;     -0.2852076, .default = 0.050710417))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-138"><a href="#cb4-138" tabindex="-1"></a><span class="co">#&gt;     2.968517 | is.na(wt) ~ case_when(wt &lt; 2.395998 ~ 0.09562649, </span></span>
+<span id="cb4-139"><a href="#cb4-139" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) ~ 0.030671425, </span></span>
+<span id="cb4-140"><a href="#cb4-140" tabindex="-1"></a><span class="co">#&gt;         .default = 0.05167179)), .default = case_when(wt &lt; 3.169236 ~ </span></span>
+<span id="cb4-141"><a href="#cb4-141" tabindex="-1"></a><span class="co">#&gt;     0.10924038, .default = 0.15209839))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-142"><a href="#cb4-142" tabindex="-1"></a><span class="co">#&gt;     4.6603813 ~ case_when(wt &lt; 3.8444972 ~ case_when(wt &lt; 3.7543807 ~ </span></span>
+<span id="cb4-143"><a href="#cb4-143" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.6485877 ~ -0.20742543, .default = 0.05482601), </span></span>
+<span id="cb4-144"><a href="#cb4-144" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 3.8092306 ~ -0.24619183, .default = -0.29740682)), </span></span>
+<span id="cb4-145"><a href="#cb4-145" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 3.9572487 ~ 0.038011894, .default = -0.16367215)), </span></span>
+<span id="cb4-146"><a href="#cb4-146" tabindex="-1"></a><span class="co">#&gt;     .default = case_when(wt &lt; 5.295736 ~ -0.34202775, .default = case_when(wt &lt; </span></span>
+<span id="cb4-147"><a href="#cb4-147" tabindex="-1"></a><span class="co">#&gt;         5.3839173 ~ -0.19026054, .default = -0.34202775))))) + </span></span>
+<span id="cb4-148"><a href="#cb4-148" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-149"><a href="#cb4-149" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.2547061, .default = 0.3411788), .default = case_when(wt &lt; </span></span>
+<span id="cb4-150"><a href="#cb4-150" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.14599857, </span></span>
+<span id="cb4-151"><a href="#cb4-151" tabindex="-1"></a><span class="co">#&gt;         .default = 0.17811665), .default = 0.30411884)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-152"><a href="#cb4-152" tabindex="-1"></a><span class="co">#&gt;         3.545185 | is.na(wt) ~ case_when(cyl %in% c(&quot;6&quot;, &quot;8&quot;) | </span></span>
+<span id="cb4-153"><a href="#cb4-153" tabindex="-1"></a><span class="co">#&gt;         is.na(cyl) ~ case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) | is.na(gear) ~ </span></span>
+<span id="cb4-154"><a href="#cb4-154" tabindex="-1"></a><span class="co">#&gt;         case_when(wt &lt; 3.0187383 ~ case_when(gear %in% &quot;5&quot; ~ </span></span>
+<span id="cb4-155"><a href="#cb4-155" tabindex="-1"></a><span class="co">#&gt;             -0.009651031, .default = 0.022467041), .default = case_when(cyl %in% </span></span>
+<span id="cb4-156"><a href="#cb4-156" tabindex="-1"></a><span class="co">#&gt;             &quot;8&quot; ~ -0.13790566, .default = -0.10042306)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-157"><a href="#cb4-157" tabindex="-1"></a><span class="co">#&gt;         3.4494674 | is.na(wt) ~ case_when(cyl %in% &quot;6&quot; ~ 0.032349702, </span></span>
+<span id="cb4-158"><a href="#cb4-158" tabindex="-1"></a><span class="co">#&gt;         .default = 0.053846233), .default = case_when(cyl %in% </span></span>
+<span id="cb4-159"><a href="#cb4-159" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; ~ -0.060213663, .default = -0.043150064))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-160"><a href="#cb4-160" tabindex="-1"></a><span class="co">#&gt;         2.9660938 | is.na(wt) ~ case_when(wt &lt; 2.395714 ~ 0.06693844, </span></span>
+<span id="cb4-161"><a href="#cb4-161" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) ~ 0.021469802, </span></span>
+<span id="cb4-162"><a href="#cb4-162" tabindex="-1"></a><span class="co">#&gt;             .default = 0.036170196)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-163"><a href="#cb4-163" tabindex="-1"></a><span class="co">#&gt;         3.1690087 ~ 0.07646851, .default = 0.10646908))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-164"><a href="#cb4-164" tabindex="-1"></a><span class="co">#&gt;         3.6516023 ~ case_when(gear %in% c(&quot;3&quot;, &quot;4&quot;) ~ -0.31221378, </span></span>
+<span id="cb4-165"><a href="#cb4-165" tabindex="-1"></a><span class="co">#&gt;         .default = -0.16521378), .default = case_when(wt &lt; 3.7554536 ~ </span></span>
+<span id="cb4-166"><a href="#cb4-166" tabindex="-1"></a><span class="co">#&gt;         0.03837799, .default = case_when(wt &lt; 4.66794 ~ case_when(wt &lt; </span></span>
+<span id="cb4-167"><a href="#cb4-167" tabindex="-1"></a><span class="co">#&gt;         3.8216221 ~ -0.17233424, .default = -0.09871565), .default = case_when(wt &lt; </span></span>
+<span id="cb4-168"><a href="#cb4-168" tabindex="-1"></a><span class="co">#&gt;         5.294052 ~ -0.23941945, .default = -0.18630086)))))) + </span></span>
+<span id="cb4-169"><a href="#cb4-169" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-170"><a href="#cb4-170" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.17829448, .default = 0.23882514), .default = case_when(wt &lt; </span></span>
+<span id="cb4-171"><a href="#cb4-171" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.102199174, </span></span>
+<span id="cb4-172"><a href="#cb4-172" tabindex="-1"></a><span class="co">#&gt;         .default = 0.1246819), .default = 0.2128831)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-173"><a href="#cb4-173" tabindex="-1"></a><span class="co">#&gt;         3.545185 | is.na(wt) ~ case_when(cyl %in% c(&quot;6&quot;, &quot;8&quot;) | </span></span>
+<span id="cb4-174"><a href="#cb4-174" tabindex="-1"></a><span class="co">#&gt;         is.na(cyl) ~ case_when(wt &lt; 3.4398956 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-175"><a href="#cb4-175" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; ~ case_when(gear %in% c(&quot;3&quot;, &quot;4&quot;) ~ -0.21579918, </span></span>
+<span id="cb4-176"><a href="#cb4-176" tabindex="-1"></a><span class="co">#&gt;         .default = -0.09653412), .default = case_when(gear %in% </span></span>
+<span id="cb4-177"><a href="#cb4-177" tabindex="-1"></a><span class="co">#&gt;         &quot;5&quot; ~ -0.0067556766, .default = 0.018032875)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-178"><a href="#cb4-178" tabindex="-1"></a><span class="co">#&gt;         &quot;6&quot; | is.na(cyl) ~ case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) | </span></span>
+<span id="cb4-179"><a href="#cb4-179" tabindex="-1"></a><span class="co">#&gt;         is.na(gear) ~ -0.07029591, .default = -0.030205078), </span></span>
+<span id="cb4-180"><a href="#cb4-180" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.4799478 ~ 0.2911838, .default = -0.042149447))), </span></span>
+<span id="cb4-181"><a href="#cb4-181" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 2.9660938 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-182"><a href="#cb4-182" tabindex="-1"></a><span class="co">#&gt;             2.395714 ~ 0.046856917, .default = case_when(gear %in% </span></span>
+<span id="cb4-183"><a href="#cb4-183" tabindex="-1"></a><span class="co">#&gt;             c(&quot;4&quot;, &quot;5&quot;) ~ 0.015029067, .default = 0.02531891)), </span></span>
+<span id="cb4-184"><a href="#cb4-184" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.1690087 ~ 0.05352768, </span></span>
+<span id="cb4-185"><a href="#cb4-185" tabindex="-1"></a><span class="co">#&gt;                 .default = 0.07452862))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-186"><a href="#cb4-186" tabindex="-1"></a><span class="co">#&gt;         3.6516023 ~ case_when(gear %in% c(&quot;3&quot;, &quot;4&quot;) ~ -0.2185496, </span></span>
+<span id="cb4-187"><a href="#cb4-187" tabindex="-1"></a><span class="co">#&gt;         .default = -0.1156497), .default = case_when(wt &lt; 3.7554536 ~ </span></span>
+<span id="cb4-188"><a href="#cb4-188" tabindex="-1"></a><span class="co">#&gt;         0.02686466, .default = case_when(wt &lt; 5.371858 ~ case_when(wt &lt; </span></span>
+<span id="cb4-189"><a href="#cb4-189" tabindex="-1"></a><span class="co">#&gt;         4.6505475 ~ -0.08198429, .default = -0.122442834), .default = -0.18352908))))) + </span></span>
+<span id="cb4-190"><a href="#cb4-190" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 2.2596803 ~ case_when(wt &lt; 1.8848817 ~ case_when(wt &lt; </span></span>
+<span id="cb4-191"><a href="#cb4-191" tabindex="-1"></a><span class="co">#&gt;         1.7250888 ~ 0.12480595, .default = 0.16717711), .default = case_when(wt &lt; </span></span>
+<span id="cb4-192"><a href="#cb4-192" tabindex="-1"></a><span class="co">#&gt;         2.1698422 ~ case_when(gear %in% c(&quot;3&quot;, &quot;5&quot;) ~ 0.071539305, </span></span>
+<span id="cb4-193"><a href="#cb4-193" tabindex="-1"></a><span class="co">#&gt;         .default = 0.08727746), .default = 0.14901821)), .default = case_when(wt &lt; </span></span>
+<span id="cb4-194"><a href="#cb4-194" tabindex="-1"></a><span class="co">#&gt;         3.545185 | is.na(wt) ~ case_when(cyl %in% c(&quot;6&quot;, &quot;8&quot;) | </span></span>
+<span id="cb4-195"><a href="#cb4-195" tabindex="-1"></a><span class="co">#&gt;         is.na(cyl) ~ case_when(wt &lt; 3.4398956 | is.na(wt) ~ case_when(cyl %in% </span></span>
+<span id="cb4-196"><a href="#cb4-196" tabindex="-1"></a><span class="co">#&gt;         &quot;8&quot; ~ case_when(gear %in% c(&quot;3&quot;, &quot;4&quot;) ~ -0.15105939, </span></span>
+<span id="cb4-197"><a href="#cb4-197" tabindex="-1"></a><span class="co">#&gt;         .default = -0.067573704), .default = case_when(gear %in% </span></span>
+<span id="cb4-198"><a href="#cb4-198" tabindex="-1"></a><span class="co">#&gt;         &quot;5&quot; ~ -0.0047289277, .default = 0.012623252)), .default = case_when(cyl %in% </span></span>
+<span id="cb4-199"><a href="#cb4-199" tabindex="-1"></a><span class="co">#&gt;         &quot;6&quot; | is.na(cyl) ~ case_when(gear %in% c(&quot;4&quot;, &quot;5&quot;) | </span></span>
+<span id="cb4-200"><a href="#cb4-200" tabindex="-1"></a><span class="co">#&gt;         is.na(gear) ~ -0.049207307, .default = -0.021143645), </span></span>
+<span id="cb4-201"><a href="#cb4-201" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 3.4799478 ~ 0.20382877, .default = -0.029504586))), </span></span>
+<span id="cb4-202"><a href="#cb4-202" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(wt &lt; 2.9660938 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb4-203"><a href="#cb4-203" tabindex="-1"></a><span class="co">#&gt;             2.395714 ~ 0.032799568, .default = case_when(gear %in% </span></span>
+<span id="cb4-204"><a href="#cb4-204" tabindex="-1"></a><span class="co">#&gt;             c(&quot;4&quot;, &quot;5&quot;) ~ 0.010520095, .default = 0.017723465)), </span></span>
+<span id="cb4-205"><a href="#cb4-205" tabindex="-1"></a><span class="co">#&gt;             .default = case_when(wt &lt; 3.1690087 ~ 0.037469327, </span></span>
+<span id="cb4-206"><a href="#cb4-206" tabindex="-1"></a><span class="co">#&gt;                 .default = 0.0521703))), .default = case_when(wt &lt; </span></span>
+<span id="cb4-207"><a href="#cb4-207" tabindex="-1"></a><span class="co">#&gt;         3.6516023 ~ case_when(gear %in% c(&quot;3&quot;, &quot;4&quot;) ~ -0.15298468, </span></span>
+<span id="cb4-208"><a href="#cb4-208" tabindex="-1"></a><span class="co">#&gt;         .default = -0.08095493), .default = case_when(wt &lt; 3.7554536 ~ </span></span>
+<span id="cb4-209"><a href="#cb4-209" tabindex="-1"></a><span class="co">#&gt;         0.01880516, .default = case_when(wt &lt; 5.371858 ~ case_when(wt &lt; </span></span>
+<span id="cb4-210"><a href="#cb4-210" tabindex="-1"></a><span class="co">#&gt;         4.6505475 ~ -0.057389073, .default = -0.08570987), .default = -0.1284704))))))</span></span></code></pre></div>
+</div>
+<div id="classification" class="section level2">
+<h2>Classification</h2>
+<p>For binary classification, <code>tidypredict_fit()</code> returns the
+probability of the second (positive) outcome level via the logistic
+link.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>mtcars3 <span class="ot">&lt;-</span> mtcars</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>mtcars3<span class="sc">$</span>vs <span class="ot">&lt;-</span> <span class="fu">factor</span>(mtcars3<span class="sc">$</span>vs)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>model_bin <span class="ot">&lt;-</span> <span class="fu">boost_tree</span>(<span class="at">mode =</span> <span class="st">&quot;classification&quot;</span>, <span class="at">trees =</span> <span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;h2o_gbm&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">fit</span>(vs <span class="sc">~</span> wt <span class="sc">+</span> cyl <span class="sc">+</span> hp, <span class="at">data =</span> mtcars3)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model_bin)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; 1/(1 + exp(-(-0.251314428280906 + (case_when(hp &lt; 136.5 | is.na(hp) ~ </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.013999 | is.na(wt) ~ case_when(cyl &lt; 5 | </span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt;         is.na(cyl) ~ case_when(wt &lt; 2.1673985 | is.na(wt) ~ case_when(wt &lt; </span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt;         2.0395863 | is.na(wt) ~ 0.6857143, .default = -0.53333336), </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt;         .default = 0.6857143), .default = -0.53333336), .default = 0.6857143), </span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt;     .default = -0.53333336) + case_when(hp &lt; 136.5 | is.na(hp) ~ </span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt;     case_when(wt &lt; 3.013999 | is.na(wt) ~ case_when(cyl &lt; 5 | </span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;         is.na(cyl) ~ case_when(hp &lt; 78.5 ~ 0.49429598, .default = case_when(hp &lt; </span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;         92 ~ -0.43688414, .default = 0.49429598)), .default = -0.43688414), </span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt;         .default = 0.49429598), .default = -0.43688414) + case_when(hp &lt; </span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;     136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | is.na(wt) ~ </span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt;     case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; 2.1673985 | </span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ 0.4185206, </span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt;         .default = -0.3884335), .default = 0.4185206), .default = -0.3884335), </span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;     .default = 0.4185206), .default = -0.3884335) + case_when(hp &lt; </span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;     136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | is.na(wt) ~ </span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt;     case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; 2.1673985 | </span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ 0.37798885, </span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt;         .default = -0.35996836), .default = 0.37798885), .default = -0.35996836), </span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt;     .default = 0.37798885), .default = -0.35996836) + case_when(hp &lt; </span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt;     136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | is.na(wt) ~ </span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt;     case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(hp &lt; 78.5 ~ 0.35344094, </span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt;         .default = case_when(hp &lt; 92 ~ -0.34183982, .default = 0.35344094)), </span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt;         .default = -0.34183982), .default = 0.35344094), .default = -0.34183982) + </span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt;     case_when(hp &lt; 136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | </span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; </span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt;         2.1673985 | is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ </span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt;         0.33752984, .default = -0.3297256), .default = 0.33752984), </span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt;         .default = -0.3297256), .default = 0.33752984), .default = -0.3297256) + </span></span>
+<span id="cb5-38"><a href="#cb5-38" tabindex="-1"></a><span class="co">#&gt;     case_when(hp &lt; 136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | </span></span>
+<span id="cb5-39"><a href="#cb5-39" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; </span></span>
+<span id="cb5-40"><a href="#cb5-40" tabindex="-1"></a><span class="co">#&gt;         2.1673985 | is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ </span></span>
+<span id="cb5-41"><a href="#cb5-41" tabindex="-1"></a><span class="co">#&gt;         0.32677868, .default = -0.32137632), .default = 0.32677868), </span></span>
+<span id="cb5-42"><a href="#cb5-42" tabindex="-1"></a><span class="co">#&gt;         .default = -0.32137632), .default = 0.32677868), .default = -0.32137632) + </span></span>
+<span id="cb5-43"><a href="#cb5-43" tabindex="-1"></a><span class="co">#&gt;     case_when(hp &lt; 136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | </span></span>
+<span id="cb5-44"><a href="#cb5-44" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; </span></span>
+<span id="cb5-45"><a href="#cb5-45" tabindex="-1"></a><span class="co">#&gt;         2.1673985 | is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ </span></span>
+<span id="cb5-46"><a href="#cb5-46" tabindex="-1"></a><span class="co">#&gt;         0.31931394, .default = -0.31550103), .default = 0.31931394), </span></span>
+<span id="cb5-47"><a href="#cb5-47" tabindex="-1"></a><span class="co">#&gt;         .default = -0.31550103), .default = 0.31931394), .default = -0.31550103) + </span></span>
+<span id="cb5-48"><a href="#cb5-48" tabindex="-1"></a><span class="co">#&gt;     case_when(hp &lt; 136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | </span></span>
+<span id="cb5-49"><a href="#cb5-49" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(wt &lt; </span></span>
+<span id="cb5-50"><a href="#cb5-50" tabindex="-1"></a><span class="co">#&gt;         2.1673985 | is.na(wt) ~ case_when(wt &lt; 2.0395863 | is.na(wt) ~ </span></span>
+<span id="cb5-51"><a href="#cb5-51" tabindex="-1"></a><span class="co">#&gt;         0.31403443, .default = -0.31130683), .default = 0.31403443), </span></span>
+<span id="cb5-52"><a href="#cb5-52" tabindex="-1"></a><span class="co">#&gt;         .default = -0.31130683), .default = 0.31403443), .default = -0.31130683) + </span></span>
+<span id="cb5-53"><a href="#cb5-53" tabindex="-1"></a><span class="co">#&gt;     case_when(hp &lt; 136.5 | is.na(hp) ~ case_when(wt &lt; 3.013999 | </span></span>
+<span id="cb5-54"><a href="#cb5-54" tabindex="-1"></a><span class="co">#&gt;         is.na(wt) ~ case_when(cyl &lt; 5 | is.na(cyl) ~ case_when(hp &lt; </span></span>
+<span id="cb5-55"><a href="#cb5-55" tabindex="-1"></a><span class="co">#&gt;         78.5 ~ 0.31025207, .default = case_when(hp &lt; 92 ~ -0.30828214, </span></span>
+<span id="cb5-56"><a href="#cb5-56" tabindex="-1"></a><span class="co">#&gt;         .default = 0.31025207)), .default = -0.30828214), .default = 0.31025207), </span></span>
+<span id="cb5-57"><a href="#cb5-57" tabindex="-1"></a><span class="co">#&gt;         .default = -0.30828214)))))</span></span></code></pre></div>
+<p>For multiclass classification, <code>tidypredict_fit()</code> returns
+a named list with one softmax probability formula per class.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>model_multi <span class="ot">&lt;-</span> <span class="fu">boost_tree</span>(<span class="at">mode =</span> <span class="st">&quot;classification&quot;</span>, <span class="at">trees =</span> <span class="dv">10</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;h2o_gbm&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="fu">fit</span>(Species <span class="sc">~</span> ., <span class="at">data =</span> iris)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="fu">names</span>(<span class="fu">tidypredict_fit</span>(model_multi))</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;setosa&quot;     &quot;versicolor&quot; &quot;virginica&quot;</span></span></code></pre></div>
+</div>
+<div id="rulefit-models" class="section level2">
+<h2>RuleFit models</h2>
+<p>H2O’s RuleFit models, available through the <code>&quot;h2o&quot;</code> engine
+of <code>rule_fit()</code>, are also supported for regression and binary
+classification. A RuleFit model is a lasso model over two kinds of
+terms: rules extracted from a tree ensemble, and the original predictors
+entered linearly. <code>tidypredict</code> reads both from
+<code>h2o::h2o.rule_importance()</code>, translates each rule into a
+<code>dplyr::case_when()</code> statement, and adds the terms
+together.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>model_rules <span class="ot">&lt;-</span> <span class="fu">rule_fit</span>(<span class="at">mode =</span> <span class="st">&quot;regression&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;h2o&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> hp <span class="sc">+</span> disp, <span class="at">data =</span> mtcars)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model_rules)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; 33.6849250683784 + (-2.98365666456682 * wt + case_when(wt &lt; 2.25968027114868 ~ </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;     1.26925770017171, .default = 0) + case_when(disp &lt; 101.545547485352 ~ </span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;     0.0549192265975584, .default = 0) + case_when(disp &lt; 97.7222671508789 &amp; </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;     hp &lt; 118 ~ 0.0549192265955938, .default = 0) + -0.0243188365426759 * </span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;     hp + -0.00296051728171442 * disp)</span></span></code></pre></div>
+</div>
+<div id="limitations" class="section level2">
+<h2>Limitations</h2>
+<p>Of H2O’s tree ensembles, only GBM models are supported, not H2O’s
+XGBoost. The gaussian, bernoulli, and multinomial distributions are
+supported. Multiclass RuleFit models are not supported, because
+<code>h2o::h2o.rule_importance()</code> does not expose the per-class
+coefficients needed to reproduce the predictions. Because predictions
+require a live H2O cluster, the parsed formula cannot be reused after
+the cluster is shut down.</p>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

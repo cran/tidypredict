@@ -403,8 +403,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; $ gear &lt;dbl&gt; 4, 4, 4, 3, 3, 3, 3, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3,…</span></span>
 <span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; $ carb &lt;dbl&gt; 4, 4, 1, 1, 2, 1, 4, 2, 2, 4, 4, 3, 3, 3, 4, 4, 4, 1, 2, 1, 1, 2,…</span></span>
 <span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; $ fit  &lt;dbl&gt; 22.17473, 21.51315, 24.86796, 20.63104, 17.64676, 20.04599, 16.60…</span></span></code></pre></div></li>
-<li><p>Confirm that <code>tidypredict</code> results match to the
-model’s <code>predict()</code> results.</p>
+<li><p>Confirm that <code>tidypredict</code> results match the model’s
+<code>predict()</code> results.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">tidypredict_test</span>(model, mtcars[, <span class="sc">-</span><span class="dv">1</span>])</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; tidypredict test results</span></span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; Difference threshold: 1e-12</span></span>
@@ -444,8 +444,16 @@ model’s <code>predict()</code> results.</p>
 <span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
 <span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 4</span></span>
 <span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;parsed_model&quot; &quot;pm_regression&quot; &quot;list&quot;</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">str</span>(pm<span class="sc">$</span>trees[<span class="dv">1</span>])</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt;  NULL</span></span></code></pre></div>
+<p>A <code>glmnet</code> model has no trees; each entry of
+<code>pm$terms</code> describes one coefficient:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">str</span>(pm<span class="sc">$</span>terms[<span class="dv">1</span>], <span class="dv">3</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; List of 1</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt;  $ :List of 4</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;   ..$ label       : chr &quot;(Intercept)&quot;</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;   ..$ coef        : num 35.3</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;   ..$ is_intercept: int 1</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt;   ..$ fields      :List of 1</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt;   .. ..$ :List of 2</span></span></code></pre></div>
 </div>
 
 

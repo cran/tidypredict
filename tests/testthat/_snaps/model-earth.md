@@ -5,246 +5,45 @@
     Output
       [1] "20.534817535821 + (ifelse(disp < 145, 145 - disp, 0) * 0.148589866311) + \n    (ifelse(disp > 145, disp - 145, 0) * -0.025012854678)"
 
-# formulas produces correct predictions
+# an ordered factor is rejected (#323)
 
     Code
-      tidypredict_test(earth::earth(age ~ sibsp + parch, data = earth::etitanic),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ sibsp + parch, data = earth::etitanic,
-      degree = 2), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ sibsp + parch, data = earth::etitanic,
-      degree = 3), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic, pmethod = "backward"),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic, pmethod = "none"),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic, pmethod = "exhaustive"),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic, pmethod = "forward"),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(age ~ ., data = earth::etitanic, pmethod = "seqrep"),
-      earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ age + sibsp, data = earth::etitanic,
-      glm = list(family = binomial)), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ age + sibsp, data = earth::etitanic,
-      glm = list(family = binomial), degree = 2), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ ., data = earth::etitanic, glm = list(
-        family = binomial), pmethod = "backward"), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ ., data = earth::etitanic, glm = list(
-        family = binomial), pmethod = "none"), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ ., data = earth::etitanic, glm = list(
-        family = binomial), pmethod = "exhaustive"), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ ., data = earth::etitanic, glm = list(
-        family = binomial), pmethod = "forward"), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(survived ~ ., data = earth::etitanic, glm = list(
-        family = binomial), pmethod = "seqrep"), earth::etitanic)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(Sepal.Length ~ ., data = iris), iris)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(x = iris[, -1], y = iris$Sepal.Length), iris)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(Sepal.Length ~ ., data = iris, degree = 2,
-      pmethod = "none"), iris)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
----
-
-    Code
-      tidypredict_test(earth::earth(x = iris[, -1], y = iris$Sepal.Length, degree = 2,
-      pmethod = "none"), iris)
-    Output
-      tidypredict test results
-      Difference threshold: 1e-12
-      
-       All results are within the difference threshold
-
-# .extract_earth_multiclass errors on non-earth model
-
-    Code
-      .extract_earth_multiclass(model)
+      tidypredict_fit(earth::earth(y ~ x + z + f, data = d))
     Condition
-      Error in `.extract_earth_multiclass()`:
-      ! `model` must be <earth>, not a <lm> object.
+      Error in `acceptable_contrasts()`:
+      ! The treatment contrast is the only one supported at this time. Field(s) with an invalid contrast are: "f".
 
-# .extract_earth_multiclass errors on binary model
+# a global non-treatment contrast is rejected (#323)
 
     Code
-      .extract_earth_multiclass(model)
+      tidypredict_fit(earth::earth(y ~ x + z + f, data = d))
     Condition
-      Error in `.extract_earth_multiclass()`:
+      Error in `acceptable_contrasts()`:
+      ! The treatment contrast is the only one supported at this time. Field(s) with an invalid contrast are: "f".
+
+# tidypredict_class_exprs errors on non-earth model
+
+    Code
+      tidypredict_class_exprs(model)
+    Condition
+      Error in `tidypredict_class_exprs()`:
+      ! `tidypredict_class_exprs()` is not available for models of class <lm>.
+
+# tidypredict_class_exprs errors on binary model
+
+    Code
+      tidypredict_class_exprs(model)
+    Condition
+      Error in `tidypredict_class_exprs()`:
       ! Model does not contain multiclass information.
       i Fit the earth model with `glm = TRUE` for classification.
 
-# .extract_earth_multiclass errors on regression model
+# tidypredict_class_exprs errors on regression model
 
     Code
-      .extract_earth_multiclass(model)
+      tidypredict_class_exprs(model)
     Condition
-      Error in `.extract_earth_multiclass()`:
+      Error in `tidypredict_class_exprs()`:
       ! Model does not contain multiclass information.
       i Fit the earth model with `glm = TRUE` for classification.
 

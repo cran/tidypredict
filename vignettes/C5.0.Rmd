@@ -1,0 +1,112 @@
+---
+title: "Decision trees, using C5.0"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Decision trees, using C5.0}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+library(dplyr)
+library(tidypredict)
+library(C50)
+set.seed(100)
+```
+
+| Function                                                      |Works|
+|---------------------------------------------------------------|-----|
+|`tidypredict_fit()`, `tidypredict_sql()`, `parse_model()`      |  ✔  |
+|`tidypredict_to_column()`                                      |  ✔  |
+|`tidypredict_test()`                                           |  ✔  |
+|`tidypredict_interval()`, `tidypredict_sql_interval()`         |  ✗  |
+|`parsnip`                                                      |  ✔  |
+
+## How it works
+
+Here is a simple `C5.0()` classification model using the `mtcars` dataset:
+
+```{r}
+library(dplyr)
+library(tidypredict)
+library(C50)
+
+mtcars2 <- mtcars
+mtcars2$vs <- factor(mtcars2$vs)
+
+model <- C5.0(mtcars2[, c("wt", "cyl", "mpg")], mtcars2$vs)
+```
+
+## Under the hood
+
+C5.0 stores its fitted tree as text in the `tree` element of the model object. `tidypredict` parses that text directly, so the model can be translated even when it was fitted through the x/y interface (as `parsnip` does).
+
+The tree is transformed into a `dplyr`, a.k.a. Tidy Eval, formula. The decision tree becomes a nested `dplyr::case_when()` statement.
+
+```{r}
+tidypredict_fit(model)
+```
+
+From there, the Tidy Eval formula can be used anywhere it can be evaluated. `tidypredict` provides three paths:
+
+- Use directly inside `dplyr`,
+  `mutate(mtcars2, !! tidypredict_fit(model))`
+- Use `tidypredict_to_column(model)` to add it to a piped command set
+- Use `tidypredict_sql(model, con)` to retrieve the SQL statement
+
+## Categorical predictors
+
+`C5.0` handles categorical predictors natively. The generated formula uses `%in%` for categorical splits, and multi-way splits become nested `case_when()` branches:
+
+```{r}
+mtcars3 <- mtcars2
+mtcars3$gear <- factor(mtcars3$gear)
+
+model_cat <- C5.0(mtcars3[, c("wt", "gear", "mpg")], mtcars3$vs)
+tidypredict_fit(model_cat)
+```
+
+## parsnip
+
+`tidypredict` also supports `C5.0` model objects fitted via the `parsnip` package, both as a `decision_tree()` and as a boosted `boost_tree()`.
+
+```{r}
+library(parsnip)
+
+parsnip_model <- decision_tree(mode = "classification") |>
+  set_engine("C5.0") |>
+  fit(vs ~ wt + cyl + mpg, data = mtcars2)
+
+tidypredict_fit(parsnip_model)
+```
+
+## Boosted models
+
+`C5.0` can boost several trees together, which `parsnip` exposes through `boost_tree()`. Each trial casts a confidence-weighted vote, and the class with the greatest total vote is predicted. `tidypredict` reproduces this by summing the per-trial votes and picking the winning class:
+
+```{r}
+boosted_model <- boost_tree(mode = "classification", trees = 5) |>
+  set_engine("C5.0") |>
+  fit(Species ~ ., data = iris)
+
+tidypredict_fit(boosted_model)
+```
+
+## Rule-based models
+
+Instead of a tree, `C5.0` can produce an ordered set of rules (`rules = TRUE`), which `parsnip` exposes through `C5_rules()`. Each rule that a case satisfies casts a confidence-weighted vote for its class, and the class with the greatest total vote is predicted (the default class wins ties and cases matched by no rule). `tidypredict` reproduces this by summing the per-rule votes and picking the winning class:
+
+```{r}
+rule_model <- C5.0(iris[, 1:4], iris$Species, rules = TRUE)
+
+tidypredict_fit(rule_model)
+```
+
+## Limitations
+
+Some options change how C5.0 predicts in ways that cannot be expressed as a hard-split `case_when()`, so they raise an error: fuzzy thresholds (`fuzzyThreshold = TRUE`), models fitted with a cost matrix (`costs`), and boosted rule-based models (`rules = TRUE` with `trials > 1`).

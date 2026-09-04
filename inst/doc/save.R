@@ -4,7 +4,6 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 library(tidypredict)
-library(yaml)
 
 ## -----------------------------------------------------------------------------
 model <- lm(mpg ~ (wt + disp) * cyl, data = mtcars)
@@ -19,24 +18,20 @@ str(parsed, 2)
 tidypredict_fit(parsed)
 
 ## ----include = FALSE----------------------------------------------------------
-library(yaml)
 model_file <- tempfile(fileext = ".yml")
-write_yaml(parsed, model_file)
-loaded_model <- read_yaml(model_file)
-loaded_model <- as_parsed_model(loaded_model)
+tidypredict_save(parsed, model_file)
+loaded_model <- tidypredict_load(model_file)
 
 ## ----eval = FALSE-------------------------------------------------------------
-# library(yaml)
-# 
-# write_yaml(parsed, "my_model.yml")
+# tidypredict_save(parsed, "my_model.yml")
+
+## ----eval = FALSE-------------------------------------------------------------
+# tidypredict_save(model, "my_model.yml")
 
 ## ----eval = FALSE-------------------------------------------------------------
 # library(tidypredict)
-# library(yaml)
 # 
-# loaded_model <- read_yaml("my_model")
-# 
-# loaded_model <- as_parsed_model(loaded_model)
+# loaded_model <- tidypredict_load("my_model.yml")
 
 ## -----------------------------------------------------------------------------
 str(loaded_model, 2)

@@ -3,9 +3,9 @@
     Code
       tidypredict_fit(pm)
     Condition
-      Error in `build_fit_formula_catboost_nested()`:
+      Error in `catboost_check_objective()`:
       ! Unsupported objective: "UnsupportedObjective".
-      i Supported objectives: "RMSE", "MAE", "Quantile", "MAPE", "Poisson", "Huber", "LogCosh", "Expectile", "Tweedie", "Logloss", "CrossEntropy", "MultiClass", and "MultiClassOneVsAll".
+      i Supported objectives: "RMSE", "MAE", "Quantile", "MAPE", "Huber", "LogCosh", "Expectile", "Poisson", "Tweedie", "Logloss", "CrossEntropy", "MultiClass", and "MultiClassOneVsAll".
 
 # empty trees throws error
 
@@ -24,13 +24,13 @@
       ! CatBoost models require a matrix for predictions.
       i Pass the prediction matrix via the `xg_df` argument.
 
-# .extract_catboost_trees errors on non-catboost model
+# tidypredict_trees errors on non-catboost model
 
     Code
-      .extract_catboost_trees(lm(mpg ~ wt, data = mtcars))
+      tidypredict_trees(lm(mpg ~ wt, data = mtcars))
     Condition
-      Error in `.extract_catboost_trees()`:
-      ! `model` must be <catboost.Model>, not a <lm> object.
+      Error in `tidypredict_trees()`:
+      ! `tidypredict_trees()` is not available for models of class <lm>.
 
 # multiclass model requires num_class >= 2
 
@@ -39,6 +39,15 @@
     Condition
       Error in `build_fit_formula_catboost_multiclass_nested()`:
       ! Multiclass model must have num_class >= 2.
+
+# set_catboost_categories errors on levels the model never saw (#297)
+
+    Code
+      set_catboost_categories(parse_model(model), model, wrong)
+    Condition
+      Error in `build_catboost_hash_mapping()`:
+      ! Cannot name 4 categories of "cat_feat".
+      i `data` must have the levels the model was fit on.
 
 # set_catboost_categories validates parsed_model argument
 

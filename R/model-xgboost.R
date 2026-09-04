@@ -63,13 +63,20 @@ get_xgb_tree <- function(tree) {
   x
 }
 
+# Which xgboost API to read a booster with.
+#
+# Not `is.null(attr(model, "param"))`, which was the discriminator before:
+# `xgb.train()` sets that attribute and `xgb.load()` does not, so it records how
+# the object was *made* rather than which API is available. A saved and reloaded
+# booster took the pre-2.0 path and called `xgb.model.dt.tree(text = )`, an
+# argument xgboost 3.x has removed, so it failed with `argument "model" is
+# missing`. The installed version is what actually decides.
+xgb_has_new_api <- function() {
+  utils::packageVersion("xgboost") >= "2.0.0"
+}
+
 get_xgb_trees <- function(model) {
-  xd <- xgboost::xgb.dump(
-    model = model,
-    dump_format = "text",
-    with_stats = TRUE
-  )
-  if (is.null(attr(model, "param"))) {
+  if (!xgb_has_new_api()) {
     # Old xgboost API (< 2.0) - kept for backwards compatibility
     xd <- xgboost::xgb.dump(
       model = model,
@@ -92,6 +99,7 @@ get_xgb_trees_character <- function(x, feature_names) {
     trees <- xgboost::xgb.model.dt.tree(model = x)
   }
   trees <- as.data.frame(trees)
+  trees$Split <- f32_split_boundary(trees$Split)
   trees$original_order <- 1:nrow(trees)
 
   if (is.character(x)) {
@@ -120,7 +128,7 @@ get_xgb_trees_character <- function(x, feature_names) {
 
 #' @export
 parse_model.xgb.Booster <- function(model) {
-  old <- is.null(attr(model, "param"))
+  old <- !xgb_has_new_api()
 
   params <- attr(model, "param") %||% model$params
   wosilent <- params[names(params) != "silent"]
@@ -147,6 +155,7 @@ parse_model.xgb.Booster <- function(model) {
 
   json_params <- get_xgb_json_params(model)
   pm$general$params$base_score <- json_params$base_score
+  pm$general$params$objective <- params$objective %||% json_params$objective
   pm$general$booster_name <- json_params$booster_name
   pm$general$weight_drop <- json_params$weight_drop
 
@@ -231,10 +240,30 @@ parse_xgb_json_params <- function(txt) {
     }
   }
 
+  # Extract the objective - format is "objective":{"name":"binary:logistic",...
+  #
+  # A reloaded booster carries it nowhere else: `xgb.load()` sets neither
+  # `attr(model, "param")` nor `model$params`, so without this the objective is
+  # `NULL` and the raw margin is returned as though it were a probability.
+  objective_match <- regmatches(
+    txt,
+    regexpr('objective":\\{"name":"[^"]+"', txt, perl = TRUE)
+  )
+  objective <- NULL
+  if (length(objective_match) > 0 && nchar(objective_match) > 0) {
+    objective <- gsub(
+      'objective":\\{"name":"([^"]+)"',
+      "\\1",
+      objective_match,
+      perl = TRUE
+    )
+  }
+
   list(
     base_score = base_score,
     booster_name = booster_name,
-    weight_drop = weight_drop
+    weight_drop = weight_drop,
+    objective = objective
   )
 }
 
@@ -247,48 +276,94 @@ tidypredict_fit.xgb.Booster <- function(model, ...) {
 
 # Build nested xgboost formula (from model directly)
 build_fit_formula_xgb_nested <- function(model) {
-  trees_nested <- extract_xgb_trees_nested(model)
-
-  # Apply DART weight_drop if present
   json_params <- get_xgb_json_params(model)
-  trees_nested <- apply_dart_weights(trees_nested, json_params$weight_drop)
+  params <- attr(model, "param") %||% model$params
 
-  # Additive model
-  f <- reduce_addition(trees_nested)
+  # A booster of stumps mentions no column, so anchor it to one.
+  expr_recycle_over_column(
+    assemble_xgb_formula(
+      extract_xgb_trees_nested(model),
+      weight_drop = json_params$weight_drop,
+      base_score = json_params$base_score,
+      objective = params$objective %||% json_params$objective
+    ),
+    xgb_feature_names(model)
+  )
+}
 
-  base_score <- json_params$base_score
+# The columns the booster was trained on, which are the ones every generated
+# xgboost formula refers to and so are present in `newdata`. A booster fit on
+# an unnamed matrix has none, and `expr_recycle_over_column()` then leaves the
+# formula alone rather than inventing a column.
+xgb_feature_names <- function(model) {
+  if (xgb_has_new_api()) {
+    xgboost::getinfo(model, "feature_name")
+  } else {
+    model$feature_names # nocov
+  }
+}
+
+# Everything after the trees have been built is the same whether they came from
+# the fitted model or from a parsed one.
+assemble_xgb_formula <- function(
+  trees_nested,
+  weight_drop,
+  base_score,
+  objective
+) {
+  # Apply DART weight_drop if present
+  xgb_combine(
+    apply_dart_weights(trees_nested, weight_drop),
+    base_score,
+    objective
+  )
+}
+
+# Combine already-weighted per-tree expressions: an additive sum, then the
+# objective's inverse link and `base_score`.
+#
+# DART weighting is deliberately not applied here. `tidypredict_trees()` folds
+# it into the per-tree expressions it returns, so doing it again would square
+# the weights.
+xgb_combine <- function(trees, base_score, objective) {
   if (is.null(base_score)) {
     base_score <- 0.5 # nocov
   }
 
-  params <- attr(model, "param") %||% model$params
-  objective <- params$objective
-
-  apply_xgb_objective(f, objective, base_score)
+  apply_xgb_objective(reduce_addition(trees), objective, base_score)
 }
 
 # Build nested formula from parsed xgboost model (version 3)
 build_fit_formula_xgb_from_parsed <- function(parsedmodel) {
-  # Build nested trees from flat paths
+  # Build nested trees from flat paths. `get_xgb_path()` walks from each leaf up
+  # to the root, so the stored paths are leaf-first while
+  # `build_nested_from_flat_paths()` needs them root-first. Reversing here
+  # rather than in the parser keeps already-serialized models readable; the
+  # legacy flat builder ANDs the conditions together and does not care about
+  # order.
   trees_nested <- map(parsedmodel$trees, function(tree) {
-    build_nested_from_flat_paths(tree, build_xgb_nested_condition)
+    tree <- map(tree, function(leaf) {
+      leaf$path <- rev(leaf$path)
+      leaf
+    })
+    build_nested_from_flat_paths(
+      tree,
+      build_xgb_nested_condition,
+      xgb_is_left_op
+    )
   })
 
-  # Apply DART weight_drop if present
-  weight_drop <- parsedmodel$general$weight_drop
-  trees_nested <- apply_dart_weights(trees_nested, weight_drop)
-
-  # Additive model
-  f <- reduce_addition(trees_nested)
-
-  base_score <- parsedmodel$general$params$base_score
-  if (is.null(base_score)) {
-    base_score <- 0.5 # nocov
-  }
-
-  objective <- parsedmodel$general$params$objective
-
-  apply_xgb_objective(f, objective, base_score)
+  # As in `build_fit_formula_xgb_nested()`, but from the names recorded when
+  # the model was parsed.
+  expr_recycle_over_column(
+    assemble_xgb_formula(
+      trees_nested,
+      weight_drop = parsedmodel$general$weight_drop,
+      base_score = parsedmodel$general$params$base_score,
+      objective = parsedmodel$general$params$objective
+    ),
+    parsedmodel$general$feature_names
+  )
 }
 
 # Apply xgboost objective transformation to formula
@@ -315,8 +390,8 @@ apply_xgb_objective <- function(f, objective, base_score) {
   }
 
   if (objective %in% c("binary:logistic", "reg:logistic")) {
-    return(expr(
-      1 - 1 / (1 + exp(!!f + log(!!base_score / (1 - !!base_score))))
+    return(expr_logistic(
+      expr(!!f + log(!!base_score / (1 - !!base_score)))
     ))
   }
 
@@ -348,29 +423,26 @@ apply_xgb_objective <- function(f, objective, base_score) {
   )
 }
 
-# nocov start
-# Build condition for xgboost nested generation from path element
-# Note: This function is currently not called due to how build_nested_from_flat_paths
-# partitions leaves - xgboost's op naming doesn't match the expected convention.
-# Kept for potential future use when the partitioning logic is updated.
+# `get_xgb_path_fun()` labels a leaf reached through the Yes child "more-equal"
+# and one reached through the No child "less", which is the opposite of what the
+# names suggest. Yes is xgboost's left branch, so "more-equal" is left.
+xgb_is_left_op <- function(op) {
+  op == "more-equal"
+}
+
+# Build condition for xgboost nested generation from path element. Only ever
+# called with left-branch elements, so the condition is always `< threshold`.
 build_xgb_nested_condition <- function(path_elem) {
   col <- rlang::sym(path_elem$col)
   val <- as.numeric(path_elem$val)
   missing <- path_elem$missing %||% FALSE
 
-  # xgboost uses "less" for left (< threshold) and "more-equal" for right
-  if (path_elem$op %in% c("less", "more-equal")) {
-    if (missing) {
-      expr(!!col < !!val | is.na(!!col))
-    } else {
-      expr(!!col < !!val)
-    }
+  if (missing) {
+    expr(!!col < !!val | is.na(!!col))
   } else {
-    # This shouldn't happen in normal xgboost trees
-    expr(!!col >= !!val)
+    expr(!!col < !!val)
   }
 }
-# nocov end
 
 # Extract nested trees from xgboost model
 extract_xgb_trees_nested <- function(model) {
@@ -381,7 +453,7 @@ extract_xgb_trees_nested <- function(model) {
 
 # Get xgboost trees as data frame
 get_xgb_trees_df <- function(model) {
-  if (is.null(attr(model, "param"))) {
+  if (!xgb_has_new_api()) {
     # Old xgboost API (< 2.0) - kept for backwards compatibility
     xd <- xgboost::xgb.dump(
       model = model,
@@ -395,15 +467,25 @@ get_xgb_trees_df <- function(model) {
     trees <- xgboost::xgb.model.dt.tree(model = model)
   }
   trees <- as.data.frame(trees)
+  trees$Split <- f32_split_boundary(trees$Split)
 
   # Map feature indices to names if needed
-  if (is.null(attr(model, "param"))) {
+  if (!xgb_has_new_api()) {
     feature_names_tbl <- data.frame(
       Feature = as.character(0:(length(feature_names) - 1)),
       feature_name = feature_names,
       stringsAsFactors = FALSE
     )
+    # `merge()` sorts by the join column, and the code below converts node IDs
+    # to row positions assuming row `i` holds node `i - 1`, so the order has to
+    # be put back. `get_xgb_trees_character()` already does this; this path did
+    # not, which only stayed hidden because nothing reached it.
+    original_order <- seq_len(nrow(trees))
+    trees$original_order <- original_order
     trees <- merge(trees, feature_names_tbl, by = "Feature", all.x = TRUE)
+    trees <- trees[order(trees$original_order), , drop = FALSE]
+    trees$original_order <- NULL
+    rownames(trees) <- NULL
   } else {
     trees$feature_name <- ifelse(trees$Feature == "Leaf", NA, trees$Feature)
   }
@@ -523,22 +605,80 @@ build_fit_formula_xgb <- function(parsedmodel) {
   apply_xgb_objective(f, objective, base_score)
 }
 
-# For {orbital} -----------------------------------------------
+# Extractors --------------------------------------------------
 
-#' Extract processed xgboost trees
-#'
-#' For use in orbital package.
-#' @param model An xgb.Booster model
-#' @keywords internal
 #' @export
-.extract_xgb_trees <- function(model) {
-  if (!inherits(model, "xgb.Booster")) {
-    cli::cli_abort(
-      "{.arg model} must be {.cls xgb.Booster}, not {.obj_type_friendly {model}}."
-    )
-  }
+tidypredict_trees.xgb.Booster <- function(x, ...) {
+  rlang::check_dots_empty()
 
-  json_params <- get_xgb_json_params(model)
-  trees <- extract_xgb_trees_nested(model)
-  apply_dart_weights(trees, json_params$weight_drop)
+  json_params <- get_xgb_json_params(x)
+  trees <- extract_xgb_trees_nested(x)
+  # The generic promises an unnamed list; split() names these "0", "1", ...
+  unname(apply_dart_weights(trees, json_params$weight_drop))
+}
+
+#' @export
+tidypredict_combine_trees.xgb.Booster <- function(x, trees, ...) {
+  rlang::check_dots_empty()
+  check_trees_arg(trees)
+
+  json_params <- get_xgb_json_params(x)
+  params <- attr(x, "param") %||% x$params
+
+  expr_recycle_over_column(
+    xgb_combine(
+      trees,
+      json_params$base_score,
+      params$objective %||% json_params$objective
+    ),
+    xgb_feature_names(x)
+  )
+}
+
+#' @export
+tidypredict_n_trees.xgb.Booster <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  length(tidypredict_trees(x))
+}
+
+# Output metadata ---------------------------------
+
+# `apply_xgb_objective()` decides this. The two logistic objectives get wrapped
+# in a logistic and so are probabilities. `binary:hinge` gets wrapped in
+# `as.numeric(score >= 0)`, which takes only the values 0 and 1: a hard class
+# prediction rather than a number, even though it is numerically typed.
+# Everything else stays a raw score on the response scale, and the multiclass
+# objectives are rejected outright.
+#' @export
+tidypredict_output_type.pm_xgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  objective <- x$general$params$objective
+  if (
+    identical(objective, "binary:logistic") ||
+      identical(objective, "reg:logistic")
+  ) {
+    return("prob")
+  }
+  if (identical(objective, "binary:hinge")) {
+    return("class")
+  }
+  "numeric"
+}
+
+#' @export
+tidypredict_outcome_levels.pm_xgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  # xgboost is fit on a numeric label, so no fit ever records outcome levels.
+  NULL
+}
+
+#' @export
+tidypredict_normalized.pm_xgb <- function(x, ...) {
+  rlang::check_dots_empty()
+
+  # Multiclass objectives are unsupported, so the fit is always one expression.
+  NA
 }

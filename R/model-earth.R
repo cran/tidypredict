@@ -1,11 +1,7 @@
 #' @export
-tidypredict_fit.earth <- function(model) {
-  parsedmodel <- parse_model(model)
-  build_fit_formula(parsedmodel)
-}
-
-#' @export
 parse_model.earth <- function(model) {
+  acceptable_formula(model)
+
   is_glm <- !is.null(model$glm.list)
 
   pm <- list()
@@ -24,10 +20,31 @@ parse_model.earth <- function(model) {
 }
 
 
+#' @export
+acceptable_formula.earth <- function(model) {
+  # An `x`/`y` fit has no formula to check, and records neither the contrasts
+  # nor the levels a factor had, so there is nothing to check.
+  if (is.null(model$terms)) {
+    return(invisible())
+  }
+
+  # `earth` keeps no record of the contrasts it was given, so they have to be
+  # read back off the names it gave the columns a factor expanded into.
+  # `modvars` holds those names, and the variables they came from.
+  acceptable_contrasts(
+    columns = colnames(model$modvars),
+    vars = rownames(model$modvars),
+    xlevels = model$xlevels,
+    terms = model$terms
+  )
+
+  acceptable_lm(model)
+}
+
 mars_terms <- function(mod, is_glm) {
   feature_types <-
-    tibble::as_tibble(mod$dirs, rownames = "feature") %>%
-    dplyr::mutate(feature_num = dplyr::row_number()) %>%
+    tibble::as_tibble(mod$dirs, rownames = "feature") |>
+    dplyr::mutate(feature_num = dplyr::row_number()) |>
     tidyr::pivot_longer(
       cols = c(-feature, -feature_num),
       values_to = "type",
@@ -35,8 +52,8 @@ mars_terms <- function(mod, is_glm) {
     )
 
   feature_values <-
-    tibble::as_tibble(mod$cuts, rownames = "feature") %>%
-    dplyr::mutate(feature_num = dplyr::row_number()) %>%
+    tibble::as_tibble(mod$cuts, rownames = "feature") |>
+    dplyr::mutate(feature_num = dplyr::row_number()) |>
     tidyr::pivot_longer(
       cols = c(-feature, -feature_num),
       values_to = "value",
@@ -51,50 +68,50 @@ mars_terms <- function(mod, is_glm) {
 
   feature_coefs <-
     # Note coef(mod) formats data differently for logistic regression
-    tibble::as_tibble(all_coefs, rownames = "feature") %>%
+    tibble::as_tibble(all_coefs, rownames = "feature") |>
     setNames(c("feature", "coefficient"))
 
   term_to_column <-
-    tibble::as_tibble(mod$modvars, rownames = "column") %>%
+    tibble::as_tibble(mod$modvars, rownames = "column") |>
     tidyr::pivot_longer(
       cols = c(-column),
       values_to = "value",
       names_to = "term"
-    ) %>%
-    purrr::transpose() %>%
+    ) |>
+    purrr::transpose() |>
     purrr::map(
       ~ {
         if (.x$value == 1) {
-          .x$level <- gsub(.x$column, "", .x$term)
+          .x$level <- gsub(.x$column, "", .x$term, fixed = TRUE)
         } else {
           .x$level <- NA
         }
         .x
       }
-    ) %>%
-    dplyr::bind_rows() %>%
-    dplyr::filter(value == 1) %>%
+    ) |>
+    dplyr::bind_rows() |>
+    dplyr::filter(value == 1) |>
     dplyr::select(-value)
 
-  feature_types %>%
+  feature_types |>
     dplyr::full_join(
       feature_values,
       by = c("feature", "feature_num", "term")
-    ) %>%
-    dplyr::filter(type != 0) %>%
-    dplyr::right_join(feature_coefs, by = "feature") %>%
+    ) |>
+    dplyr::filter(type != 0) |>
+    dplyr::right_join(feature_coefs, by = "feature") |>
     dplyr::mutate(
       feature_num = ifelse(feature == "(Intercept)", 0, feature_num)
-    ) %>%
-    dplyr::arrange(feature_num) %>%
-    dplyr::left_join(term_to_column, by = "term") %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(lists = list(make_lists(type, column, value, level))) %>%
-    dplyr::group_by(feature, feature_num) %>%
+    ) |>
+    dplyr::arrange(feature_num) |>
+    dplyr::left_join(term_to_column, by = "term") |>
+    dplyr::rowwise() |>
+    dplyr::mutate(lists = list(make_lists(type, column, value, level))) |>
+    dplyr::group_by(feature, feature_num) |>
     dplyr::summarize(
       final = collapse_lists(feature, coefficient, lists),
       .groups = "drop"
-    ) %>%
+    ) |>
     purrr::pluck("final")
 }
 
@@ -150,19 +167,12 @@ collapse_lists <- function(label, coef, lst) {
   )
 }
 
-# For {orbital}
-#' Extract multiclass linear predictors for earth models
-#'
-#' For use in orbital package.
-#' @param model An earth model object with multiple classes (glm.list with >1 elements)
-#' @keywords internal
+# Extractors --------------------------------------------------
+
 #' @export
-.extract_earth_multiclass <- function(model) {
-  if (!inherits(model, "earth")) {
-    cli::cli_abort(
-      "{.arg model} must be {.cls earth}, not {.obj_type_friendly {model}}."
-    )
-  }
+tidypredict_class_exprs.earth <- function(x, ...) {
+  rlang::check_dots_empty()
+  model <- x
 
   if (is.null(model$glm.list) || length(model$glm.list) < 2) {
     cli::cli_abort(
@@ -185,10 +195,7 @@ collapse_lists <- function(label, coef, lst) {
 
     # Parse and build expression
     parsedmodel <- parse_model(model_single)
-    expr <- build_fit_formula(parsedmodel)
-
-    # Deparse to string, preserving numeric precision
-    deparse1(expr, control = "digits17")
+    build_fit_formula(parsedmodel)
   })
 
   names(eqs) <- class_names

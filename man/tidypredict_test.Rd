@@ -14,8 +14,7 @@ tidypredict_test(
 )
 }
 \arguments{
-\item{model}{An R model or a list with a parsed model. It currently supports
-lm(), glm() and randomForest() models.}
+\item{model}{An R model or a list with a parsed model.}
 
 \item{df}{A data frame that contains all of the needed fields to run the prediction.
 It defaults to the "model" data frame object inside the model object.}
@@ -31,9 +30,15 @@ included in the test. It defaults to FALSE.}
 \item{max_rows}{The number of rows in the object passed in the df argument. Highly
 recommended for large data sets.}
 
-\item{xg_df}{A xgb.DMatrix object, required only for XGBoost models. It defaults to
-NULL
-recommended for large data sets.}
+\item{xg_df}{The prediction matrix used to obtain the model's own
+predictions. Required for XGBoost, LightGBM and CatBoost models, which
+cannot predict from a data frame. Pass an \code{xgb.DMatrix} for XGBoost and a
+numeric matrix for LightGBM and CatBoost. It defaults to NULL.}
+}
+\value{
+A list of test results comparing \code{predict()} and
+\code{tidypredict_to_column()}, including the maximum difference and whether it
+stays within \code{threshold}.
 }
 \description{
 Compares the results of predict() and tidypredict_to_column()

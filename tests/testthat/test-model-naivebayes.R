@@ -1,0 +1,580 @@
+test_that("returns the right output", {
+  skip_if_not_installed("klaR")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  tf <- tidypredict_fit(model)
+  expect_type(tf, "list")
+  expect_named(tf, levels(iris$Species))
+  expect_true(all(vapply(tf, is.language, logical(1))))
+
+  pm <- parse_model(model)
+  expect_s3_class(pm, "list")
+  expect_equal(length(pm), 3)
+  expect_equal(pm$general$model, "NaiveBayes")
+  expect_equal(pm$general$version, 2)
+  expect_equal(pm$classes, levels(iris$Species))
+})
+
+test_that("predictions match native predict", {
+  skip_if_not_installed("klaR")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))
+  native <- predict(model, iris)$posterior
+
+  expect_equal(unname(probs), unname(native))
+  expect_equal(unname(rowSums(probs)), rep(1, nrow(iris)))
+})
+
+test_that("categorical and logical predictors are handled", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(
+    mtcars,
+    cyl = factor(cyl),
+    gear = factor(gear),
+    vs = vs == 1
+  )
+  model <- klaR::NaiveBayes(cyl ~ mpg + gear + vs, data = df)
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+  expect_equal(unname(probs), unname(predict(model, df)$posterior))
+})
+
+test_that("zero-probability levels use the predict threshold", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(mtcars, cyl = factor(cyl), gear = factor(gear))
+  model <- klaR::NaiveBayes(cyl ~ gear, data = df)
+
+  # `gear == 5` never happens for `cyl == 8`
+  expect_true(any(model$tables$gear == 0))
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+  expect_equal(unname(probs), unname(predict(model, df)$posterior))
+})
+
+test_that("missing predictors are skipped, matching predict() (#300)", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(
+    mtcars,
+    cyl = factor(cyl),
+    gear = factor(gear),
+    vs = vs == 1
+  )
+  model <- klaR::NaiveBayes(cyl ~ mpg + gear + vs, data = df)
+
+  nd <- df[1:8, ]
+  nd$mpg[1:3] <- NA
+  nd$gear[c(2, 4)] <- NA
+  nd$vs[5] <- NA
+  # A row missing every predictor falls back on the class prior alone
+  nd[6, c("mpg", "gear", "vs")] <- NA
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, nd))
+
+  expect_equal(
+    unname(probs),
+    unname(suppressWarnings(predict(model, nd)$posterior))
+  )
+})
+
+test_that("unseen factor levels are skipped, matching predict() (#300)", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(mtcars, cyl = factor(cyl), gear = factor(gear))
+  model <- klaR::NaiveBayes(cyl ~ mpg + gear, data = df)
+
+  nd <- df[1:3, ]
+  nd$gear <- factor(c("3", "9", "9"), levels = c(levels(df$gear), "9"))
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, nd))
+
+  expect_equal(
+    unname(probs),
+    unname(suppressWarnings(predict(model, nd)$posterior))
+  )
+})
+
+nb_factor_data <- function(levels, ordered = FALSE, seed = 1) {
+  set.seed(seed)
+  df <- data.frame(
+    x = rnorm(90),
+    f = factor(rep(levels, length.out = 90), levels = levels, ordered = ordered)
+  )
+  df$cls <- factor(ifelse(df$x + as.numeric(df$f) > 1.5, "a", "b"))
+  df
+}
+
+test_that("awkward factor levels are handled", {
+  skip_if_not_installed("klaR")
+  # Both engines key their conditional probabilities on the level itself
+  # rather than on a model matrix column, so contrasts never come into it.
+  colon <- nb_factor_data(c("a:b", "c:d", "e"))
+  model <- klaR::NaiveBayes(cls ~ x + f, data = colon)
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, colon))),
+    unname(predict(model, colon)$posterior)
+  )
+
+  ord <- nb_factor_data(c("p", "q", "r"), ordered = TRUE)
+  model <- klaR::NaiveBayes(cls ~ x + f, data = ord)
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, ord))),
+    unname(predict(model, ord)$posterior)
+  )
+
+  unused <- nb_factor_data(c("p", "q", "r"))
+  unused$f <- factor(unused$f, levels = c("p", "q", "r", "unused"))
+  model <- klaR::NaiveBayes(cls ~ x + f, data = unused)
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, unused))),
+    unname(predict(model, unused)$posterior)
+  )
+
+  set.seed(1)
+  collide <- data.frame(
+    g = factor(rep(c("x1", "y2", "z3"), length.out = 60)),
+    gy2 = rnorm(60)
+  )
+  collide$cls <- factor(
+    ifelse(collide$gy2 + as.numeric(collide$g) > 2, "a", "b")
+  )
+  model <- klaR::NaiveBayes(cls ~ g + gy2, data = collide)
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, collide))),
+    unname(predict(model, collide)$posterior)
+  )
+})
+
+test_that("binary outcomes are handled", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(mtcars, am = factor(am))
+  model <- klaR::NaiveBayes(am ~ mpg + wt, data = df)
+
+  tf <- tidypredict_fit(model)
+  expect_named(tf, c("0", "1"))
+
+  probs <- sapply(tf, \(f) rlang::eval_tidy(f, df))
+
+  expect_equal(unname(probs), unname(predict(model, df)$posterior))
+})
+
+test_that("prior, fL, and the x/grouping interface are handled", {
+  skip_if_not_installed("klaR")
+
+  df <- transform(mtcars, cyl = factor(cyl), gear = factor(gear))
+
+  for (prior in list(NULL, c(0.2, 0.3, 0.5))) {
+    for (fL in c(0, 1)) {
+      model <- klaR::NaiveBayes(
+        df[c("mpg", "gear")],
+        df$cyl,
+        prior = prior,
+        fL = fL
+      )
+
+      probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+      expect_equal(
+        unname(probs),
+        unname(predict(model, df[c("mpg", "gear")])$posterior)
+      )
+    }
+  }
+})
+
+test_that("a single predictor is handled", {
+  skip_if_not_installed("klaR")
+
+  model <- klaR::NaiveBayes(Species ~ Petal.Width, data = iris)
+
+  expect_snapshot(round_print(tidypredict_fit(model)[["setosa"]]))
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))
+
+  expect_equal(unname(probs), unname(predict(model, iris)$posterior))
+})
+
+test_that("model can be saved and re-loaded", {
+  skip_if_not_installed("klaR")
+  skip_if_not_installed("yaml")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  pm <- parse_model(model)
+  mp <- withr::local_tempfile(fileext = ".yml")
+  yaml::write_yaml(pm, mp)
+  pm <- as_parsed_model(yaml::read_yaml(mp))
+
+  from_model <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))
+  from_pm <- sapply(tidypredict_fit(pm), \(f) rlang::eval_tidy(f, iris))
+
+  expect_equal(from_model, from_pm, tolerance = 1e-6)
+})
+
+test_that("kernel density fits are rejected", {
+  skip_if_not_installed("klaR")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris, usekernel = TRUE)
+
+  expect_snapshot(error = TRUE, tidypredict_fit(model))
+  expect_snapshot(error = TRUE, parse_model(model))
+})
+
+test_that("tidypredict_test errors for NaiveBayes models", {
+  skip_if_not_installed("klaR")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  expect_snapshot(error = TRUE, tidypredict_test(model, iris))
+})
+
+test_that("SQL translation works", {
+  skip_if_not_installed("klaR")
+  skip_if_not_installed("dbplyr")
+
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  sql <- tidypredict_sql(model, dbplyr::simulate_dbi())
+
+  expect_named(sql, levels(iris$Species))
+  expect_true(all(vapply(sql, \(x) inherits(x, "sql"), logical(1))))
+})
+
+test_that("naive_bayes returns the right output", {
+  skip_if_not_installed("naivebayes")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris)
+
+  tf <- tidypredict_fit(model)
+  expect_type(tf, "list")
+  expect_named(tf, levels(iris$Species))
+  expect_true(all(vapply(tf, is.language, logical(1))))
+
+  pm <- parse_model(model)
+  expect_s3_class(pm, "list")
+  expect_equal(length(pm), 3)
+  expect_equal(pm$general$model, "naive_bayes")
+  expect_equal(pm$general$version, 2)
+  expect_equal(pm$classes, levels(iris$Species))
+})
+
+test_that("naive_bayes predictions match native predict", {
+  skip_if_not_installed("naivebayes")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris)
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))
+  native <- predict(model, iris[names(model$tables)], type = "prob")
+
+  expect_equal(unname(probs), unname(native))
+  expect_equal(unname(rowSums(probs)), rep(1, nrow(iris)))
+})
+
+test_that("naive_bayes handles categorical, logical, and Poisson predictors", {
+  skip_if_not_installed("naivebayes")
+
+  df <- transform(
+    mtcars,
+    cyl = factor(cyl),
+    gear = factor(gear),
+    vs = vs == 1,
+    carb = as.integer(carb)
+  )
+
+  for (usepoisson in c(FALSE, TRUE)) {
+    model <- suppressWarnings(naivebayes::naive_bayes(
+      cyl ~ mpg + gear + vs + carb,
+      data = df,
+      usepoisson = usepoisson
+    ))
+
+    probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+    expect_equal(
+      unname(probs),
+      unname(predict(model, df[names(model$tables)], type = "prob"))
+    )
+  }
+})
+
+test_that("naive_bayes skips missing predictors, matching predict() (#300)", {
+  skip_if_not_installed("naivebayes")
+
+  df <- transform(
+    mtcars,
+    cyl = factor(cyl),
+    gear = factor(gear),
+    vs = vs == 1,
+    carb = as.integer(carb)
+  )
+  model <- suppressWarnings(naivebayes::naive_bayes(
+    cyl ~ mpg + gear + vs + carb,
+    data = df,
+    usepoisson = TRUE
+  ))
+
+  nd <- df[1:8, names(model$tables)]
+  nd$mpg[1:3] <- NA
+  nd$gear[c(2, 4)] <- NA
+  nd$vs[5] <- NA
+  nd$carb[c(1, 7)] <- NA
+  nd[6, ] <- NA
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, nd))
+
+  expect_equal(unname(probs), unname(predict(model, nd, type = "prob")))
+})
+
+test_that("naive_bayes returns NA for a class with one observation (#300)", {
+  skip_if_not_installed("naivebayes")
+
+  df <- data.frame(
+    x = c(mtcars$mpg, 3),
+    y = factor(c(ifelse(mtcars$am == 1, "a", "b"), "c"))
+  )
+  model <- suppressWarnings(naivebayes::naive_bayes(y ~ x, data = df))
+
+  # `c` has a single observation, so it has no standard deviation
+  expect_true(is.na(model$tables$x[2, "c"]))
+
+  nd <- data.frame(x = c(20, 25))
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, nd))
+
+  expect_equal(unname(probs), unname(predict(model, nd, type = "prob")))
+  expect_true(all(is.na(probs)))
+})
+
+test_that("naive_bayes zero-probability levels use the predict threshold", {
+  skip_if_not_installed("naivebayes")
+
+  df <- transform(mtcars, cyl = factor(cyl), gear = factor(gear))
+  model <- suppressWarnings(naivebayes::naive_bayes(cyl ~ gear, data = df))
+
+  # `gear == 5` never happens for `cyl == 8`
+  expect_true(any(model$tables$gear == 0))
+
+  probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+  expect_equal(
+    unname(probs),
+    unname(predict(model, df[names(model$tables)], type = "prob"))
+  )
+})
+
+test_that("naive_bayes handles awkward factor levels and NA training data", {
+  skip_if_not_installed("naivebayes")
+
+  colon <- nb_factor_data(c("a:b", "c:d", "e"))
+  model <- suppressWarnings(naivebayes::naive_bayes(cls ~ x + f, data = colon))
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, colon))),
+    unname(predict(model, colon[names(model$tables)], type = "prob"))
+  )
+
+  ord <- nb_factor_data(c("p", "q", "r"), ordered = TRUE)
+  model <- suppressWarnings(naivebayes::naive_bayes(cls ~ x + f, data = ord))
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, ord))),
+    unname(predict(model, ord[names(model$tables)], type = "prob"))
+  )
+
+  unused <- nb_factor_data(c("p", "q", "r"))
+  unused$f <- factor(unused$f, levels = c("p", "q", "r", "unused"))
+  model <- suppressWarnings(naivebayes::naive_bayes(cls ~ x + f, data = unused))
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, unused))),
+    unname(predict(model, unused[names(model$tables)], type = "prob"))
+  )
+
+  # An `NA` in the training data changes the mean and standard deviation the
+  # model stores for the predictor.
+  trained_with_na <- nb_factor_data(c("p", "q", "r"))
+  trained_with_na$x[1:5] <- NA
+  model <- suppressWarnings(naivebayes::naive_bayes(
+    cls ~ x + f,
+    data = trained_with_na
+  ))
+  probs <- sapply(
+    tidypredict_fit(model),
+    \(f) rlang::eval_tidy(f, trained_with_na)
+  )
+  expect_equal(
+    unname(probs),
+    unname(suppressWarnings(predict(
+      model,
+      trained_with_na[names(model$tables)],
+      type = "prob"
+    )))
+  )
+})
+
+test_that("naive_bayes handles laplace and prior", {
+  skip_if_not_installed("naivebayes")
+
+  df <- transform(mtcars, cyl = factor(cyl), gear = factor(gear))
+
+  for (prior in list(NULL, c(0.2, 0.3, 0.5))) {
+    for (laplace in c(0, 1)) {
+      model <- suppressWarnings(naivebayes::naive_bayes(
+        df[c("mpg", "gear")],
+        df$cyl,
+        prior = prior,
+        laplace = laplace
+      ))
+
+      probs <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, df))
+
+      expect_equal(
+        unname(probs),
+        unname(predict(model, df[c("mpg", "gear")], type = "prob"))
+      )
+    }
+  }
+})
+
+test_that("naive_bayes handles binary outcomes and a single predictor", {
+  skip_if_not_installed("naivebayes")
+
+  df <- transform(mtcars, am = factor(am))
+  model <- naivebayes::naive_bayes(am ~ mpg, data = df)
+
+  tf <- tidypredict_fit(model)
+  expect_named(tf, c("0", "1"))
+  expect_snapshot(round_print(tf[["0"]]))
+
+  probs <- sapply(tf, \(f) rlang::eval_tidy(f, df))
+
+  expect_equal(
+    unname(probs),
+    unname(predict(model, df[names(model$tables)], type = "prob"))
+  )
+})
+
+test_that("naive_bayes model can be saved and re-loaded", {
+  skip_if_not_installed("naivebayes")
+  skip_if_not_installed("yaml")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris)
+
+  pm <- parse_model(model)
+  mp <- withr::local_tempfile(fileext = ".yml")
+  yaml::write_yaml(pm, mp)
+  pm <- as_parsed_model(yaml::read_yaml(mp))
+
+  from_model <- sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))
+  from_pm <- sapply(tidypredict_fit(pm), \(f) rlang::eval_tidy(f, iris))
+
+  expect_equal(from_model, from_pm, tolerance = 1e-6)
+})
+
+test_that("an underflowing density is a documented divergence (#300)", {
+  skip_if_not_installed("klaR")
+  # Both references replace a density that underflowed to zero with their
+  # `threshold`, `0.001`. That is enormous next to the other classes' honest
+  # densities, so the class fitting the value worst wins, silently unless every
+  # class underflows. The log scale used here never underflows, so this is left
+  # as a divergence rather than reproduced. See the naive Bayes article.
+  model <- klaR::NaiveBayes(Species ~ ., data = iris)
+
+  outlier <- iris[1, ]
+  outlier$Sepal.Length <- 20
+
+  reference <- predict(model, outlier)$posterior
+  expect_equal(colnames(reference)[which.max(reference)], "setosa")
+
+  probs <- vapply(
+    tidypredict_fit(model),
+    function(f) rlang::eval_tidy(f, outlier),
+    numeric(1)
+  )
+  expect_equal(names(probs)[which.max(probs)], "virginica")
+
+  # Values the model can actually have seen are unaffected
+  expect_equal(
+    unname(sapply(tidypredict_fit(model), \(f) rlang::eval_tidy(f, iris))),
+    unname(predict(model, iris)$posterior)
+  )
+})
+
+test_that("naive_bayes kernel density fits are rejected", {
+  skip_if_not_installed("naivebayes")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris, usekernel = TRUE)
+
+  expect_snapshot(error = TRUE, tidypredict_fit(model))
+  expect_snapshot(error = TRUE, parse_model(model))
+})
+
+test_that("tidypredict_test errors for naive_bayes models", {
+  skip_if_not_installed("naivebayes")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris)
+
+  expect_snapshot(error = TRUE, tidypredict_test(model, iris))
+})
+
+test_that("naive_bayes SQL translation works", {
+  skip_if_not_installed("naivebayes")
+  skip_if_not_installed("dbplyr")
+
+  model <- naivebayes::naive_bayes(Species ~ ., data = iris)
+
+  sql <- tidypredict_sql(model, dbplyr::simulate_dbi())
+
+  expect_named(sql, levels(iris$Species))
+  expect_true(all(vapply(sql, \(x) inherits(x, "sql"), logical(1))))
+})
+
+test_that("naive_bayes is handled with parsnip", {
+  skip_if_not_installed("parsnip")
+  skip_if_not_installed("naivebayes")
+  skip_if_not_installed("discrim")
+
+  spec <- parsnip::set_engine(
+    parsnip::naive_Bayes(),
+    "naivebayes",
+    usekernel = FALSE
+  )
+  model <- parsnip::fit(spec, Species ~ ., iris)
+
+  tf <- tidypredict_fit(model)
+
+  expect_type(tf, "list")
+  expect_named(tf, levels(iris$Species))
+
+  probs <- sapply(tf, \(f) rlang::eval_tidy(f, iris))
+  native <- as.matrix(predict(model, iris, type = "prob"))
+
+  expect_equal(unname(probs), unname(native))
+})
+
+test_that("NaiveBayes is handled with parsnip", {
+  skip_if_not_installed("parsnip")
+  skip_if_not_installed("klaR")
+  skip_if_not_installed("discrim")
+
+  spec <- parsnip::set_engine(
+    parsnip::naive_Bayes(),
+    "klaR",
+    usekernel = FALSE
+  )
+  model <- parsnip::fit(spec, Species ~ ., iris)
+
+  tf <- tidypredict_fit(model)
+
+  expect_type(tf, "list")
+  expect_named(tf, levels(iris$Species))
+
+  probs <- sapply(tf, \(f) rlang::eval_tidy(f, iris))
+  native <- as.matrix(predict(model, iris, type = "prob"))
+
+  expect_equal(unname(probs), unname(native))
+})

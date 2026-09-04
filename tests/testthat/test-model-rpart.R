@@ -1,4 +1,5 @@
 test_that("rpart_tree_info returns correct structure", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ cyl + wt, data = mtcars)
   tree_info <- rpart_tree_info(model)
 
@@ -19,6 +20,7 @@ test_that("rpart_tree_info returns correct structure", {
 })
 
 test_that("rpart_tree_info handles categorical predictors", {
+  skip_if_not_installed("rpart")
   mtcars2 <- mtcars
   mtcars2$cyl <- factor(mtcars2$cyl)
   model <- rpart::rpart(mpg ~ cyl + wt, data = mtcars2)
@@ -29,6 +31,7 @@ test_that("rpart_tree_info handles categorical predictors", {
 })
 
 test_that("returns the right output", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ am + cyl, data = mtcars)
   tf <- tidypredict_fit(model)
   pm <- parse_model(model)
@@ -42,6 +45,7 @@ test_that("returns the right output", {
 })
 
 test_that("tidypredict_fit produces correct predictions", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ am + cyl, data = mtcars)
 
   fit_expr <- tidypredict_fit(model)
@@ -52,15 +56,17 @@ test_that("tidypredict_fit produces correct predictions", {
 })
 
 test_that("formulas produce correct predictions - regression", {
-  expect_snapshot(
+  skip_if_not_installed("rpart")
+  expect_false(
     tidypredict_test(
       rpart::rpart(mpg ~ am + cyl + wt, data = mtcars),
       mtcars
-    )
+    )$alert
   )
 })
 
 test_that("tidypredict_test.rpart max_rows parameter works", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ am + cyl + wt, data = mtcars)
   result <- tidypredict_test(model, mtcars, max_rows = 10)
 
@@ -68,6 +74,7 @@ test_that("tidypredict_test.rpart max_rows parameter works", {
 })
 
 test_that("tidypredict_test.rpart alert message works", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ am + cyl + wt, data = mtcars)
 
   # Use negative threshold to trigger alert
@@ -79,27 +86,30 @@ test_that("tidypredict_test.rpart alert message works", {
 })
 
 test_that("formulas produce correct predictions - classification", {
-  expect_snapshot(
+  skip_if_not_installed("rpart")
+  expect_false(
     tidypredict_test(
       rpart::rpart(Species ~ ., data = iris),
       iris
-    )
+    )$alert
   )
 })
 
 test_that("categorical predictors work correctly", {
+  skip_if_not_installed("rpart")
   mtcars2 <- mtcars
   mtcars2$cyl <- factor(mtcars2$cyl)
 
-  expect_snapshot(
+  expect_false(
     tidypredict_test(
       rpart::rpart(mpg ~ cyl + wt, data = mtcars2),
       mtcars2
-    )
+    )$alert
   )
 })
 
 test_that("stump trees work correctly", {
+  skip_if_not_installed("rpart")
   ctrl <- rpart::rpart.control(minsplit = 100, cp = 1)
   model <- rpart::rpart(mpg ~ cyl + disp, data = mtcars, control = ctrl)
 
@@ -110,6 +120,7 @@ test_that("stump trees work correctly", {
 })
 
 test_that("produced case_when uses .default", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ am + cyl, data = mtcars)
 
   fit <- tidypredict_fit(model)
@@ -118,22 +129,25 @@ test_that("produced case_when uses .default", {
   expect_match(fit_text, "\\.default")
 })
 
-# .extract_rpart_classprob tests ------------------------------------------
+# tidypredict_class_exprs tests -------------------------------------------
 
-test_that(".extract_rpart_classprob returns list of expressions", {
+test_that("tidypredict_class_exprs returns list of expressions", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(Species ~ Sepal.Length + Sepal.Width, data = iris)
 
-  exprs <- .extract_rpart_classprob(model)
+  exprs <- tidypredict_class_exprs(model)
 
   expect_type(exprs, "list")
   expect_length(exprs, 3)
-  expect_true(all(vapply(exprs, typeof, character(1)) == "language"))
+  expect_named(exprs, levels(iris$Species))
+  expect_all_equal(vapply(exprs, typeof, character(1)), "language")
 })
 
-test_that(".extract_rpart_classprob results match predict probabilities", {
+test_that("tidypredict_class_exprs results match predict probabilities", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(Species ~ Sepal.Length + Sepal.Width, data = iris)
 
-  exprs <- .extract_rpart_classprob(model)
+  exprs <- tidypredict_class_exprs(model)
   eval_env <- rlang::new_environment(
     data = as.list(iris),
     parent = asNamespace("dplyr")
@@ -146,18 +160,21 @@ test_that(".extract_rpart_classprob results match predict probabilities", {
   expect_equal(unname(combined), unname(native))
 })
 
-test_that(".extract_rpart_classprob errors on non-rpart model", {
-  expect_snapshot(.extract_rpart_classprob(list()), error = TRUE)
+test_that("tidypredict_class_exprs errors on non-rpart model", {
+  skip_if_not_installed("rpart")
+  expect_snapshot(tidypredict_class_exprs(list()), error = TRUE)
 })
 
-test_that(".extract_rpart_classprob errors on regression model", {
+test_that("tidypredict_class_exprs errors on regression model", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ cyl + wt, data = mtcars)
-  expect_snapshot(.extract_rpart_classprob(model), error = TRUE)
+  expect_snapshot(tidypredict_class_exprs(model), error = TRUE)
 })
 
 # Nested case_when tests --------------------------------------------------
 
 test_that("tidypredict_fit matches original model predictions", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ cyl + wt, data = mtcars)
 
   fit_expr <- tidypredict_fit(model)
@@ -168,6 +185,7 @@ test_that("tidypredict_fit matches original model predictions", {
 })
 
 test_that("tidypredict_fit works for classification", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(Species ~ ., data = iris)
 
   fit_expr <- tidypredict_fit(model)
@@ -177,10 +195,11 @@ test_that("tidypredict_fit works for classification", {
   expect_equal(fit_pred, original_pred)
 })
 
-test_that(".extract_rpart_classprob matches original model probabilities", {
+test_that("tidypredict_class_exprs matches original model probabilities", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(Species ~ Sepal.Length + Sepal.Width, data = iris)
 
-  exprs <- .extract_rpart_classprob(model)
+  exprs <- tidypredict_class_exprs(model)
 
   eval_env <- rlang::new_environment(
     data = as.list(iris),
@@ -195,6 +214,7 @@ test_that(".extract_rpart_classprob matches original model probabilities", {
 })
 
 test_that(".rpart_tree_info_full is exported and works", {
+  skip_if_not_installed("rpart")
   model <- rpart::rpart(mpg ~ cyl + wt, data = mtcars)
 
   tree_info <- .rpart_tree_info_full(model)
@@ -211,7 +231,207 @@ test_that(".rpart_tree_info_full is exported and works", {
       "prediction",
       "node_splits",
       "majority_left",
-      "use_surrogates"
+      "use_surrogates",
+      "stops_at_node"
     )
+  )
+})
+
+test_that("splits at an observed value use a strict inequality", {
+  skip_if_not_installed("rpart")
+  # `rpart` sends values strictly below the cut point to the left, which is
+  # only observable when the cut point coincides with a value in the new data
+  df <- data.frame(x = c(1, 1, 2, 2, 3, 3), y = c(0, 0, 0, 1, 1, 1))
+  model <- rpart::rpart(
+    y ~ x,
+    data = df[df$x != 2, ],
+    control = rpart::rpart.control(minsplit = 2, cp = 0)
+  )
+
+  expect_equal(
+    dplyr::mutate(df, pred = !!tidypredict_fit(model))$pred,
+    unname(predict(model, df))
+  )
+})
+
+test_that("missing values route through surrogate splits (#294)", {
+  skip_if_not_installed("rpart")
+
+  set.seed(1)
+  n <- 300
+  df <- data.frame(x = rnorm(n), w = rnorm(n))
+  # `z` is correlated with `x`, so it is chosen as a surrogate for it.
+  df$z <- df$x * 0.9 + rnorm(n, 0, 0.3)
+  df$y <- 2 * df$x - df$w + rnorm(n)
+
+  new_df <- df
+  set.seed(2)
+  for (col in c("x", "z", "w")) {
+    new_df[[col]][sample(n, 40)] <- NA_real_
+  }
+
+  model <- rpart::rpart(y ~ x + z + w, data = df)
+  expect_gt(sum(model$frame$nsurrogate), 0)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), new_df),
+    unname(predict(model, new_df))
+  )
+})
+
+test_that("every usesurrogate mode is followed (#294)", {
+  skip_if_not_installed("rpart")
+
+  set.seed(1)
+  n <- 300
+  df <- data.frame(x = rnorm(n), w = rnorm(n))
+  df$z <- df$x * 0.9 + rnorm(n, 0, 0.3)
+  df$y <- 2 * df$x - df$w + rnorm(n)
+
+  new_df <- df
+  set.seed(2)
+  for (col in c("x", "z", "w")) {
+    new_df[[col]][sample(n, 40)] <- NA_real_
+  }
+  # Rows missing every predictor exercise the fallback, which differs by mode:
+  # 2 goes in the majority direction, 0 and 1 stop at the node.
+  new_df[1:6, c("x", "z", "w")] <- NA_real_
+
+  for (mode in 0:2) {
+    model <- rpart::rpart(
+      y ~ x + z + w,
+      data = df,
+      control = rpart::rpart.control(usesurrogate = mode)
+    )
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(model), new_df),
+      unname(predict(model, new_df))
+    )
+  }
+})
+
+test_that("awkward factor level names match predict()", {
+  skip_if_not_installed("rpart")
+
+  # An unused level, a level holding a `:`, and a level whose name is also a
+  # column in the data all break a parser that splits level names by hand.
+  df <- mtcars
+  df$g <- factor(
+    c("a:b", "wt", "c d")[df$cyl / 2 - 1],
+    levels = c("a:b", "wt", "c d", "unused")
+  )
+  model <- rpart::rpart(mpg ~ g + wt, data = df)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df))
+  )
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(parse_model(model)), df),
+    unname(predict(model, df))
+  )
+})
+
+test_that("ordered factor predictors match predict()", {
+  skip_if_not_installed("rpart")
+
+  df <- transform(mtcars, gear = factor(gear, ordered = TRUE))
+  model <- rpart::rpart(mpg ~ gear + wt, data = df)
+
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), df),
+    unname(predict(model, df))
+  )
+})
+
+test_that("an unused outcome level matches predict()", {
+  skip_if_not_installed("rpart")
+
+  # `Species` keeps all three levels, but only two of them occur.
+  df <- iris[iris$Species != "virginica", ]
+  model <- rpart::rpart(Species ~ Sepal.Length + Petal.Length, data = df)
+
+  expect_equal(
+    as.character(rlang::eval_tidy(tidypredict_fit(model), df)),
+    as.character(predict(model, df, type = "class"))
+  )
+})
+
+test_that("training data containing NA matches predict() in every mode", {
+  skip_if_not_installed("rpart")
+
+  df <- mtcars
+  df$wt[1:5] <- NA_real_
+
+  for (mode in 0:2) {
+    model <- rpart::rpart(
+      mpg ~ wt + disp + hp,
+      data = df,
+      control = rpart::rpart.control(usesurrogate = mode)
+    )
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(model), df),
+      unname(predict(model, df))
+    )
+  }
+})
+
+test_that("a constant outcome matches predict()", {
+  skip_if_not_installed("rpart")
+
+  df <- transform(mtcars, const = 5)
+  model <- rpart::rpart(const ~ wt + cyl, data = df)
+
+  # Neither fit can split, so each collapses to a scalar rather than a vector.
+  fit <- rlang::eval_tidy(tidypredict_fit(model), df)
+  expect_length(fit, 1)
+  expect_equal(rep(fit, nrow(df)), unname(predict(model, df)))
+})
+
+test_that("single-row training data matches predict()", {
+  skip_if_not_installed("rpart")
+
+  model <- rpart::rpart(mpg ~ wt, data = mtcars[1, ])
+
+  fit <- rlang::eval_tidy(tidypredict_fit(model), mtcars)
+  expect_length(fit, 1)
+  expect_equal(rep(fit, nrow(mtcars)), unname(predict(model, mtcars)))
+})
+
+test_that("a value at a threshold and at its float32 image matches predict()", {
+  skip_if_not_installed("rpart")
+
+  # `rpart` keeps its cut points as doubles, so a value at the float32 image of
+  # a cut has to land on the same side as `predict()` sends it.
+  model <- rpart::rpart(mpg ~ wt + disp, data = mtcars)
+  cuts <- unname(model$splits[, "index"])
+
+  for (col in c("wt", "disp")) {
+    probe <- mtcars[rep(1, length(cuts) * 2), ]
+    probe[[col]] <- c(cuts, as_f32(cuts))
+
+    expect_equal(
+      rlang::eval_tidy(tidypredict_fit(model), probe),
+      unname(predict(model, probe))
+    )
+  }
+})
+
+test_that("a tied split has no majority to go with (#294)", {
+  skip_if_not_installed("rpart")
+
+  # Both children hold 10 rows, so `rpart` stops at the node rather than
+  # picking a side, and returns the node's own fitted value.
+  df <- data.frame(x = c(1:10, 21:30), y = c(rep(0, 10), rep(1, 10)))
+  model <- rpart::rpart(
+    y ~ x,
+    data = df,
+    control = rpart::rpart.control(cp = 0)
+  )
+
+  new_df <- data.frame(x = NA_real_)
+  expect_equal(
+    rlang::eval_tidy(tidypredict_fit(model), new_df),
+    unname(predict(model, new_df))
   )
 })

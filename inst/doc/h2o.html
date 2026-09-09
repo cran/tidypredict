@@ -1307,11 +1307,11 @@ together.</p>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> hp <span class="sc">+</span> disp, <span class="at">data =</span> mtcars)</span>
 <span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
 <span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(model_rules)</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; 33.6849250683784 + (-2.98365666456682 * wt + case_when(wt &lt; 2.25968027114868 ~ </span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;     1.26925770017171, .default = 0) + case_when(disp &lt; 101.545547485352 ~ </span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;     0.0549192265975584, .default = 0) + case_when(disp &lt; 97.7222671508789 &amp; </span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;     hp &lt; 118 ~ 0.0549192265955938, .default = 0) + -0.0243188365426759 * </span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;     hp + -0.00296051728171442 * disp)</span></span></code></pre></div>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; 33.6849250683783 + (-2.98365666456686 * wt + case_when(wt &lt; 2.25968027114868 ~ </span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;     1.26925770017161, .default = 0) + case_when(disp &lt; 101.545547485352 ~ </span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;     0.0549192265975869, .default = 0) + case_when(disp &lt; 97.7222671508789 &amp; </span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;     hp &lt; 118 ~ 0.0549192265957092, .default = 0) + -0.0243188365426762 * </span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;     hp + -0.00296051728171396 * disp)</span></span></code></pre></div>
 </div>
 <div id="limitations" class="section level2">
 <h2>Limitations</h2>

@@ -1,7 +1,7 @@
-b5f1b94eff1188d4499deaf6aed1819a *DESCRIPTION
+aed9194712d765ff6851343edfd8f9bf *DESCRIPTION
 a380de81b46fe390ff65be9018e55a1c *LICENSE
 76ff033ae5055f5ac0ea6cc69950034a *NAMESPACE
-074d540c0ab00840ba00a9f50b95f5b8 *NEWS.md
+a5e5d5670905f69343d398b0ac106575 *NEWS.md
 537780e3efa6fe98a373df4dcbac6871 *R/abort.R
 f4bd2bd4d67c3bcf4883ed4c49ce1c4e *R/acceptable.R
 1f14c204a1f4e59d66c551ba81fb345d *R/as-parsed-model.R
@@ -85,9 +85,9 @@ db7cd9657b6ce45ed05eddc473a80cb0 *inst/doc/glm.Rmd
 8e72d023231508f292cb32071cd1db21 *inst/doc/glmnet.R
 a860db65486ca405a811595c8cf0e05e *inst/doc/glmnet.Rmd
 318ca6a544869c407400e21339bf3ac2 *inst/doc/glmnet.html
-83150227ed670201099d25f338296917 *inst/doc/h2o.R
-03998633c2089c209e4c3d3b93e1778a *inst/doc/h2o.Rmd
-27caafbde0c548b2676ecc8b46f94ad0 *inst/doc/h2o.html
+594faade55c51fa59122c1256e078258 *inst/doc/h2o.R
+cddf538b4057a293ebc44401e15dc84c *inst/doc/h2o.Rmd
+5e280e3c45b354aac95465eb0d9cd4d9 *inst/doc/h2o.html
 b58908674210969c613e5861071fc4d6 *inst/doc/ksvm.R
 d2ac2616c63c7932842da0fa11d0f9bf *inst/doc/ksvm.Rmd
 1feaa31a17e5bc8eaa2a4d98b7a2a95b *inst/doc/ksvm.html
@@ -348,7 +348,7 @@ c3a0e100248fd062594e4f534a40b1e0 *vignettes/fda.Rmd
 28473b1c47a09c9c8c445b754639e319 *vignettes/float-precision.Rmd
 db7cd9657b6ce45ed05eddc473a80cb0 *vignettes/glm.Rmd
 a860db65486ca405a811595c8cf0e05e *vignettes/glmnet.Rmd
-03998633c2089c209e4c3d3b93e1778a *vignettes/h2o.Rmd
+cddf538b4057a293ebc44401e15dc84c *vignettes/h2o.Rmd
 d2ac2616c63c7932842da0fa11d0f9bf *vignettes/ksvm.Rmd
 86d341421aa2f6175e9604c7ac3c4846 *vignettes/lda.Rmd
 58474626a8dfefeb83b1267edfd025a3 *vignettes/lightgbm.Rmd

@@ -76,3 +76,11 @@ model_rules <- rule_fit(mode = "regression") |>
 
 tidypredict_fit(model_rules)
 
+## ----include = FALSE----------------------------------------------------------
+# Shut down the H2O cluster started at the top of this vignette so the Java
+# process it spawns does not outlive the rendering process (CRAN's check
+# systems flag leftover processes).
+if (h2o_available) {
+  try(h2o::h2o.shutdown(prompt = FALSE), silent = TRUE)
+}
+

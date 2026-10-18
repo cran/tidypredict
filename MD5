@@ -1,7 +1,7 @@
-aed9194712d765ff6851343edfd8f9bf *DESCRIPTION
+c3c6711045cae4f1a7257693b4338865 *DESCRIPTION
 a380de81b46fe390ff65be9018e55a1c *LICENSE
 76ff033ae5055f5ac0ea6cc69950034a *NAMESPACE
-a5e5d5670905f69343d398b0ac106575 *NEWS.md
+b64c6612c626940b5ba2c13619407408 *NEWS.md
 537780e3efa6fe98a373df4dcbac6871 *R/abort.R
 f4bd2bd4d67c3bcf4883ed4c49ce1c4e *R/acceptable.R
 1f14c204a1f4e59d66c551ba81fb345d *R/as-parsed-model.R
@@ -87,7 +87,7 @@ a860db65486ca405a811595c8cf0e05e *inst/doc/glmnet.Rmd
 318ca6a544869c407400e21339bf3ac2 *inst/doc/glmnet.html
 594faade55c51fa59122c1256e078258 *inst/doc/h2o.R
 cddf538b4057a293ebc44401e15dc84c *inst/doc/h2o.Rmd
-5e280e3c45b354aac95465eb0d9cd4d9 *inst/doc/h2o.html
+f071123e476c9b2d43f144d120449004 *inst/doc/h2o.html
 b58908674210969c613e5861071fc4d6 *inst/doc/ksvm.R
 d2ac2616c63c7932842da0fa11d0f9bf *inst/doc/ksvm.Rmd
 1feaa31a17e5bc8eaa2a4d98b7a2a95b *inst/doc/ksvm.html
@@ -97,9 +97,9 @@ d2ac2616c63c7932842da0fa11d0f9bf *inst/doc/ksvm.Rmd
 f8fcfbf88172704d072f63170b8340fc *inst/doc/lightgbm.R
 58474626a8dfefeb83b1267edfd025a3 *inst/doc/lightgbm.Rmd
 d243ab90369444d039493741354fc366 *inst/doc/lightgbm.html
-372c9bbde8650baa0ee276e1aa39fb5f *inst/doc/lm.R
-a54c7c1c97eb7b73805a46b748e5f485 *inst/doc/lm.Rmd
-d22e270b722e5653de4ef4e6b418a5c4 *inst/doc/lm.html
+f4e47c0eeed93d1a6dffa23b67d6a58d *inst/doc/lm.R
+d6a988ec400632ecf612e702c525bb5f *inst/doc/lm.Rmd
+9c0fde89032968dcfd7082e5c274c428 *inst/doc/lm.html
 f0f2aa3bf6478bff89315e312808ce05 *inst/doc/mars.R
 5d6ad32514f6c24898351584f04e215b *inst/doc/mars.Rmd
 d82ed3593122e40472e8dbf18a96dca2 *inst/doc/mars.html
@@ -352,7 +352,7 @@ cddf538b4057a293ebc44401e15dc84c *vignettes/h2o.Rmd
 d2ac2616c63c7932842da0fa11d0f9bf *vignettes/ksvm.Rmd
 86d341421aa2f6175e9604c7ac3c4846 *vignettes/lda.Rmd
 58474626a8dfefeb83b1267edfd025a3 *vignettes/lightgbm.Rmd
-a54c7c1c97eb7b73805a46b748e5f485 *vignettes/lm.Rmd
+d6a988ec400632ecf612e702c525bb5f *vignettes/lm.Rmd
 5d6ad32514f6c24898351584f04e215b *vignettes/mars.Rmd
 7f2b0b55c5a2f39040f3b2098e3421e3 *vignettes/mboost.Rmd
 14e6fd29b5284aeeaad2001b5c25115f *vignettes/mixOmics.Rmd

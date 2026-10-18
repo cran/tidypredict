@@ -516,7 +516,7 @@ objects fitted via the <code>parsnip</code> package.</p>
 <span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>parsnip_model <span class="ot">&lt;-</span> <span class="fu">linear_reg</span>() <span class="sc">%&gt;%</span></span>
 <span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">&quot;lm&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl, <span class="at">offset =</span> am, <span class="at">data =</span> mtcars)</span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  <span class="fu">fit</span>(mpg <span class="sc">~</span> wt <span class="sc">+</span> cyl, <span class="at">data =</span> mtcars)</span>
 <span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
 <span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="fu">tidypredict_fit</span>(parsnip_model)</span>
 <span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; 39.686261480253 + (wt * -3.19097213898374) + (cyl * -1.5077949682598)</span></span></code></pre></div>
